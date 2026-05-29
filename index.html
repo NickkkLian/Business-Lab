@@ -6,7 +6,7 @@
 <title>选题与项目实验室 · Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&family=Spline+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --paper:#ffffff; --paper-2:#f4f5f7; --card:#ffffff; --ink:#1b1c20; --ink-soft:#6a6e76;
@@ -15,6 +15,7 @@
   --shadow:0 1px 2px rgba(20,22,28,.04), 0 8px 24px -16px rgba(20,22,28,.18);
   --r:14px;
   --fun:#c08a1e; --promising:#157a72; --priority:#bb4d2b;
+  --serif:"Noto Serif","Noto Serif SC",Georgia,"Songti SC","Source Han Serif SC","Source Han Serif CN",serif;
 }
 *{box-sizing:border-box}
 html{height:auto}
@@ -23,10 +24,10 @@ body{overflow-x:clip}
 body{
   background:var(--paper);
   color:var(--ink);
-  font-family:"Spline Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-  font-size:14px; line-height:1.55;
+  font-family:var(--serif);
+  font-size:14.5px; line-height:1.7;
 }
-h1,h2,h3{font-family:"Fraunces",Georgia,"Songti SC",serif; font-weight:600; letter-spacing:-.01em; margin:0}
+h1,h2,h3{font-family:var(--serif); font-weight:700; letter-spacing:0; margin:0}
 .mono{font-family:"Space Mono",ui-monospace,monospace}
 button{font-family:inherit; cursor:pointer}
 input,textarea,select{font-family:inherit; font-size:14px; color:var(--ink)}
@@ -37,7 +38,7 @@ input,textarea,select{font-family:inherit; font-size:14px; color:var(--ink)}
 .topbar{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line)}
 .tb-in{max-width:1240px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
-.brand .logo{font-family:"Fraunces",serif;font-size:23px;font-style:italic;font-weight:500}
+.brand .logo{font-family:var(--serif);font-size:22px;font-weight:700}
 .brand .logo b{color:var(--rust);font-style:normal}
 .brand .sub{font-size:11px;color:var(--ink-soft);letter-spacing:.14em;text-transform:uppercase}
 .tabs{display:flex;gap:4px;background:var(--paper-2);padding:4px;border-radius:999px;border:1px solid var(--line)}
@@ -71,7 +72,7 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .col{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:120px}
 .col-h{display:flex;align-items:center;gap:9px;margin-bottom:12px;padding:0 4px}
 .col-h .tag{width:11px;height:11px;border-radius:3px}
-.col-h h3{font-size:16px;font-style:italic}
+.col-h h3{font-size:16px}
 .col-h .n{margin-left:auto;font-family:"Space Mono",monospace;font-size:12px;color:var(--ink-soft)}
 .col.drag-over{background:var(--rust-soft);border-color:var(--rust)}
 
@@ -110,11 +111,11 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .dash{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
 .stat .k{font-size:12px;color:var(--ink-soft);letter-spacing:.04em}
-.stat .v{font-family:"Fraunces",serif;font-size:34px;font-weight:600;line-height:1.1;margin-top:4px}
-.stat .v small{font-size:14px;color:var(--ink-soft);font-family:"Spline Sans"}
+.stat .v{font-family:var(--serif);font-size:34px;font-weight:700;line-height:1.1;margin-top:4px}
+.stat .v small{font-size:14px;color:var(--ink-soft);font-family:var(--serif);font-weight:400}
 .dash-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
-.panel h3{font-size:16px;font-style:italic;margin-bottom:14px}
+.panel h3{font-size:16px;margin-bottom:14px}
 .rank{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
 .rank:last-child{border:none}
 .rank .i{font-family:"Space Mono",monospace;color:var(--ink-soft);font-size:12px;width:18px}
@@ -125,11 +126,12 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 /* detail page (full screen) */
 .detail{position:fixed;inset:0;background:var(--paper);z-index:50;display:none;flex-direction:column}
 .detail.on{display:flex}
+#detail-content{flex:1;min-height:0;display:flex;flex-direction:column}
 .detail-h{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:13px 22px;display:flex;align-items:center;gap:12px;z-index:5;flex-wrap:wrap}
-.detail-h .nm{font-family:"Fraunces",serif;font-style:italic;font-size:18px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.detail-h .nm{font-family:var(--serif);font-weight:700;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
 .back{border:1px solid var(--line-2);background:var(--card);border-radius:10px;padding:7px 13px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .back:hover{border-color:var(--ink)}
-.detail-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:30px 22px 90px}
+.detail-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:30px 22px 90px}
 .detail-grid{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1.45fr 1fr;gap:34px;align-items:start}
 .detail-col{min-width:0}
 .side-panel{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:18px}
@@ -139,12 +141,12 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .dr-b{flex:1;overflow:auto;padding:20px 22px}
 .dr-f{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;background:var(--card)}
 .field{margin-bottom:18px}
-.field > label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:6px;text-transform:uppercase}
+.field > label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.12em;margin-bottom:7px}
 .field input[type=text],.field textarea,.field select{width:100%;padding:10px 12px;border:1px solid var(--line-2);background:var(--card);border-radius:10px;outline:none}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--ink)}
 .field textarea{resize:vertical;min-height:80px;line-height:1.6}
 .field .hint{font-size:11px;color:var(--ink-soft);margin-top:5px;font-weight:400;text-transform:none;letter-spacing:0}
-.title-in{font-family:"Fraunces",serif !important;font-size:22px !important;font-weight:600;padding:6px 0 !important;border:none !important;background:transparent !important;width:100%}
+.title-in{font-family:var(--serif) !important;font-size:24px !important;font-weight:700;padding:6px 0 !important;border:none !important;background:transparent !important;width:100%}
 .sel-row{display:flex;gap:8px;flex-wrap:wrap}
 .sel-row select{flex:1;min-width:120px}
 
@@ -155,7 +157,7 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .metric .mv{font-family:"Space Mono",monospace;font-weight:700;width:26px;text-align:right}
 .totalbox{display:flex;align-items:center;gap:14px;background:var(--ink);color:var(--paper);border-radius:12px;padding:14px 18px;margin:6px 0 18px}
 .totalbox .lab{font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
-.totalbox .num{font-family:"Fraunces",serif;font-size:32px;font-weight:600;margin-left:auto}
+.totalbox .num{font-family:var(--serif);font-size:32px;font-weight:700;margin-left:auto}
 .totalbox .num small{font-size:14px;opacity:.7}
 
 .tags-edit{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -170,7 +172,7 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .modal.on{display:flex}
 .sheet{background:var(--paper);width:640px;max-width:100%;border-radius:18px;border:1px solid var(--line-2);box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
 .sheet-h{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center}
-.sheet-h h2{font-size:20px;font-style:italic}
+.sheet-h h2{font-size:20px}
 .sheet-b{padding:22px 24px}
 .acc{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;background:var(--card)}
 .acc > summary{padding:13px 16px;font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
