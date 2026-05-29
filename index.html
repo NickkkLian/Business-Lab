@@ -9,22 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Mono:wght@400;700&family=Spline+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#f3efe6; --paper-2:#ebe5d8; --card:#fbf9f4; --ink:#23241f; --ink-soft:#55564f;
-  --line:#d8d1c2; --line-2:#c7bfac; --rust:#b1502a; --rust-soft:#e6c9b8;
-  --teal:#2f6b66; --amber:#c08a1e; --green:#5a7d3a; --slate:#5a5f6b;
-  --shadow:0 1px 0 rgba(35,36,31,.04), 0 6px 22px -12px rgba(35,36,31,.28);
+  --paper:#ffffff; --paper-2:#f4f5f7; --card:#ffffff; --ink:#1b1c20; --ink-soft:#6a6e76;
+  --line:#ebecef; --line-2:#dcdee3; --rust:#bb4d2b; --rust-soft:#f0d8cc;
+  --teal:#157a72; --amber:#b07414; --green:#3f7d2e; --slate:#566173;
+  --shadow:0 1px 2px rgba(20,22,28,.04), 0 8px 24px -16px rgba(20,22,28,.18);
   --r:14px;
-  --fun:#c08a1e; --promising:#2f6b66; --priority:#b1502a;
+  --fun:#c08a1e; --promising:#157a72; --priority:#bb4d2b;
 }
 *{box-sizing:border-box}
+html{height:auto}
 html,body{margin:0;padding:0}
+body{overflow-x:clip}
 body{
   background:var(--paper);
   color:var(--ink);
   font-family:"Spline Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   font-size:14px; line-height:1.55;
-  background-image:radial-gradient(circle at 1px 1px, rgba(35,36,31,.045) 1px, transparent 0);
-  background-size:22px 22px;
 }
 h1,h2,h3{font-family:"Fraunces",Georgia,"Songti SC",serif; font-weight:600; letter-spacing:-.01em; margin:0}
 .mono{font-family:"Space Mono",ui-monospace,monospace}
@@ -34,7 +34,7 @@ input,textarea,select{font-family:inherit; font-size:14px; color:var(--ink)}
 ::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:8px;border:2px solid var(--paper)}
 
 /* layout */
-.topbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--paper) 70%,rgba(243,239,230,.85));backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.topbar{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line)}
 .tb-in{max-width:1240px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
 .brand .logo{font-family:"Fraunces",serif;font-size:23px;font-style:italic;font-weight:500}
@@ -68,7 +68,7 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 
 /* board */
 .board{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
-.col{background:rgba(251,249,244,.5);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:120px}
+.col{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:120px}
 .col-h{display:flex;align-items:center;gap:9px;margin-bottom:12px;padding:0 4px}
 .col-h .tag{width:11px;height:11px;border-radius:3px}
 .col-h h3{font-size:16px;font-style:italic}
@@ -78,7 +78,10 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 14px;margin-bottom:11px;cursor:pointer;transition:.15s;box-shadow:var(--shadow);position:relative}
 .card:hover{border-color:var(--ink);transform:translateY(-2px)}
 .card.dragging{opacity:.4}
-.card .ttl{font-weight:600;font-size:15px;display:flex;align-items:center;gap:7px;line-height:1.3}
+.card .ttl{font-weight:600;font-size:15px;display:flex;align-items:center;gap:7px;line-height:1.3;padding-right:22px}
+.cardx{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:6px;border:1px solid var(--line-2);background:var(--card);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0;transition:.15s;line-height:1;padding:0}
+.card:hover .cardx{opacity:1}
+.cardx:hover{background:var(--rust);color:#fff;border-color:var(--rust)}
 .card .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center}
 .pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-soft);background:var(--paper)}
 .pill.path{font-family:"Space Mono",monospace;letter-spacing:-.02em}
@@ -90,6 +93,18 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 
 .add-row{margin-top:6px}
 .add-row .btn{width:100%;justify-content:center;border-style:dashed;color:var(--ink-soft)}
+
+/* research */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.kind{font-size:11px;padding:2px 9px;border-radius:999px;color:#fff;border:none;font-weight:600;letter-spacing:.02em}
+.rcard .desc{font-size:12.5px;color:var(--ink-soft);margin-top:9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+.rcard .refcnt{font-family:"Space Mono",monospace;font-size:11px;color:var(--ink-soft)}
+.refrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.refrow .rt{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.refrow .a{font-size:12px;color:var(--teal);cursor:pointer;font-weight:600}
+.refrow .x{color:var(--ink-soft);cursor:pointer}
+.backref{font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.backref:hover{color:var(--rust)}
 
 /* dashboard */
 .dash{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
@@ -107,11 +122,18 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 .rank .sc{font-family:"Space Mono",monospace;font-weight:700}
 .empty{color:var(--ink-soft);font-size:13px;padding:18px;text-align:center}
 
-/* drawer */
-.scrim{position:fixed;inset:0;background:rgba(35,36,31,.4);z-index:40;opacity:0;pointer-events:none;transition:.2s}
-.scrim.on{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;right:0;height:100%;width:560px;max-width:94vw;background:var(--paper);z-index:50;box-shadow:-20px 0 60px -30px rgba(0,0,0,.5);transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.1,1);display:flex;flex-direction:column;border-left:1px solid var(--line-2)}
-.drawer.on{transform:none}
+/* detail page (full screen) */
+.detail{position:fixed;inset:0;background:var(--paper);z-index:50;display:none;flex-direction:column}
+.detail.on{display:flex}
+.detail-h{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:13px 22px;display:flex;align-items:center;gap:12px;z-index:5;flex-wrap:wrap}
+.detail-h .nm{font-family:"Fraunces",serif;font-style:italic;font-size:18px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.back{border:1px solid var(--line-2);background:var(--card);border-radius:10px;padding:7px 13px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.back:hover{border-color:var(--ink)}
+.detail-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:30px 22px 90px}
+.detail-grid{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1.45fr 1fr;gap:34px;align-items:start}
+.detail-col{min-width:0}
+.side-panel{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+@media(max-width:780px){.detail-grid{grid-template-columns:1fr;gap:8px}.detail-h .nm{max-width:50vw}}
 .dr-h{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 .dr-h .x{margin-left:auto}
 .dr-b{flex:1;overflow:auto;padding:20px 22px}
@@ -168,7 +190,7 @@ label.inl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);mar
 .sheet input.full:focus{border-color:var(--ink)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:11px 20px;border-radius:999px;font-size:13px;font-weight:500;z-index:80;opacity:0;transition:.25s;box-shadow:var(--shadow)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:999px;font-size:13px;font-weight:500;z-index:80;opacity:0;transition:.25s;box-shadow:var(--shadow);pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--rust)}
 
@@ -195,6 +217,7 @@ label.inl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);mar
       <button class="tab" data-tab="dashboard">概览</button>
       <button class="tab" data-tab="projects">商业化项目 <span class="cnt" id="cnt-p"></span></button>
       <button class="tab" data-tab="media">自媒体方向 <span class="cnt" id="cnt-m"></span></button>
+      <button class="tab" data-tab="research">研究资料 <span class="cnt" id="cnt-r"></span></button>
     </div>
     <div class="sync">
       <span class="dot" id="syncdot" title="连接状态"></span>
@@ -206,9 +229,8 @@ label.inl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);mar
 
 <div class="wrap" id="view"></div>
 
-<!-- drawer -->
-<div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer"><div id="drawer-content"></div></aside>
+<!-- detail (full page) -->
+<div class="detail" id="detail"><div id="detail-content"></div></div>
 
 <!-- settings modal -->
 <div class="modal" id="modal">
@@ -229,10 +251,14 @@ const STATUS = [
   {k:'进行中', c:'var(--green)'},{k:'已暂停', c:'#8a7a9a'},{k:'已放弃', c:'#b6b1a4'}
 ];
 const statusColor = k => (STATUS.find(s=>s.k===k)||{}).c || 'var(--line-2)';
+const KIND_PALETTE = ['var(--teal)','var(--rust)','var(--slate)','var(--amber)','var(--green)','#7c5cbf'];
+function kindColor(k){const i=state.config.researchKinds.indexOf(k);return KIND_PALETTE[(i<0?0:i)%KIND_PALETTE.length];}
+function refCount(rid){return [...state.projects,...state.media].filter(o=>(o.refs||[]).includes(rid)).length;}
 
 const DEFAULT_CONFIG = {
   topCats: [...TOP_CATS_DEFAULT],
   midCats: ['视频','图文'],
+  researchKinds: ['行业研究','盈利模式','博主拆解','通用'],
   mediaBottom: ['知识科普','测评开箱','Vlog生活','剧情短片','教程干货','资讯解读','观点输出','穿搭美妆','美食探店','干货图文','信息差搬运','情绪共鸣'],
   projectMetrics: [
     {id:'m1', name:'市场规模', weight:2, type:'value'},
@@ -259,6 +285,7 @@ let state = {
   config: structuredClone(DEFAULT_CONFIG),
   projects: [],
   media: [],
+  research: [],
   gh: {owner:'', repo:'', token:'', path:'business.json', branch:'main'},
   ui: {tab:'dashboard', search:'', sort:'score', filter:'all'},
   sha: null,
@@ -270,7 +297,7 @@ let state = {
 const LS = 'lab_db_v1';
 function saveLocal(){
   localStorage.setItem(LS, JSON.stringify({
-    config:state.config, projects:state.projects, media:state.media,
+    config:state.config, projects:state.projects, media:state.media, research:state.research,
     gh:state.gh, ui:state.ui, sha:state.sha, dirty:state.dirty
   }));
 }
@@ -279,7 +306,7 @@ function loadLocal(){
     const r = JSON.parse(localStorage.getItem(LS)||'null');
     if(r){
       state.config = Object.assign(structuredClone(DEFAULT_CONFIG), r.config||{});
-      state.projects = r.projects||[]; state.media = r.media||[];
+      state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
       state.gh = Object.assign(state.gh, r.gh||{});
       state.ui = Object.assign(state.ui, r.ui||{});
       state.sha = r.sha||null; state.dirty = !!r.dirty;
@@ -307,7 +334,7 @@ async function ghLoad(){
     const data = JSON.parse(b64decode(j.content));
     state.sha = j.sha;
     state.config = Object.assign(structuredClone(DEFAULT_CONFIG), data.config||{});
-    state.projects = data.projects||[]; state.media = data.media||[];
+    state.projects = data.projects||[]; state.media = data.media||[]; state.research = data.research||[];
     state.connected = true; state.dirty=false;
     saveLocal(); render(); toast('已从私有仓库载入数据'); return true;
   }catch(e){toast('载入出错: '+e.message,'err');return false;}
@@ -316,7 +343,7 @@ async function ghLoad(){
 async function ghSave(){
   const {owner,repo,token} = state.gh;
   if(!owner||!repo||!token){openSettings();toast('请先填写仓库与 Token','err');return;}
-  const payload = {version:2, config:state.config, projects:state.projects, media:state.media, savedAt:new Date().toISOString()};
+  const payload = {version:2, config:state.config, projects:state.projects, media:state.media, research:state.research, savedAt:new Date().toISOString()};
   const body = {
     message:`update db @ ${new Date().toLocaleString('zh-CN')}`,
     content:b64encode(JSON.stringify(payload,null,2)),
@@ -360,6 +387,7 @@ function updateSyncDot(){
   d.title = state.dirty?'有未保存的修改':(state.connected?'已连接':'未连接');
   document.getElementById('cnt-p').textContent = state.projects.length||'';
   document.getElementById('cnt-m').textContent = state.media.length||'';
+  document.getElementById('cnt-r').textContent = state.research.length||'';
 }
 
 function render(){
@@ -368,7 +396,8 @@ function render(){
   const v=document.getElementById('view');
   if(state.ui.tab==='dashboard') v.innerHTML=renderDashboard();
   else if(state.ui.tab==='projects') renderBoard('projects');
-  else renderBoard('media');
+  else if(state.ui.tab==='media') renderBoard('media');
+  else renderResearch();
   saveLocal();
 }
 
@@ -390,7 +419,7 @@ function renderDashboard(){
     ${stat('项目总数', p.length, '个')}
     ${stat('优先考虑·项目', pri.length, '个')}
     ${stat('自媒体方向', m.length, '个')}
-    ${stat('待保存修改', state.dirty?'有':'无','')}
+    ${stat('研究资料', state.research.length, '份')}
   </div>
   <div class="dash" style="grid-template-columns:repeat(3,1fr)">
     ${TOP_CATS_DEFAULT.map(c=>`<div class="stat"><div class="k" style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:2px;background:${CAT_COLOR[c]}"></span>${c}</div><div class="v" style="font-size:24px">${byCat(c)} <small>项目 / 方向</small></div></div>`).join('')}
@@ -408,7 +437,7 @@ function filteredItems(type){
   let list = arr.slice();
   const q = state.ui.search.trim().toLowerCase();
   if(q) list = list.filter(x=>{
-    const blob = [x.name, x.notes, x.research, x.analysis, (x.tags||[]).join(' '),
+    const blob = [x.name, x.summary, x.notes, x.research, x.analysis, (x.tags||[]).join(' '),
       x.mid, x.bottom, x.platforms, x.status].join(' ').toLowerCase();
     return blob.includes(q);
   });
@@ -471,14 +500,16 @@ function cardHTML(x,type,metrics){
   const plat = (type==='media' && (x.platforms||'').trim())? `<span class="pill">📍 ${esc(x.platforms)}</span>`:'';
   const status = x.status? `<span class="pill" style="display:flex;align-items:center;gap:5px"><span class="statusdot" style="background:${statusColor(x.status)}"></span>${esc(x.status)}</span>`:'';
   const tags=(x.tags||[]).slice(0,3).map(t=>`<span class="pill">#${esc(t)}</span>`).join('');
-  const note = (x.notes||'').trim();
+  const refp=(x.refs&&x.refs.length)?`<span class="pill">📎 研究×${x.refs.length}</span>`:'';
+  const snip = ((x.summary||'').trim() || (x.notes||'').trim());
   return `<div class="card" draggable="true" data-id="${x.id}"
       ondragstart="onDragStart(event,'${x.id}')" ondragend="onDragEnd(event)"
       onclick="openDrawer('${type}','${x.id}')">
+    <button class="cardx" title="删除" onclick="quickDelete(event,'${type}','${x.id}')">✕</button>
     <div class="ttl">${esc(x.name||'未命名')} ${sc!=null?`<span class="scorebadge" style="margin-left:auto;color:${sc>=70?'var(--green)':sc>=45?'var(--amber)':'var(--rust)'}">${sc}</span>`:''}</div>
-    <div class="meta">${path}${plat}${status}${tags}</div>
+    <div class="meta">${path}${plat}${status}${tags}${refp}</div>
     ${sc!=null?`<div class="bar"><i style="width:${sc}%"></i></div>`:''}
-    ${note?`<div class="note-snip">${esc(note)}</div>`:''}
+    ${snip?`<div class="note-snip">${esc(snip)}</div>`:''}
   </div>`;
 }
 
@@ -497,37 +528,105 @@ function onDrop(e,type,cat){
   markDirty(); renderBoard(type);
 }
 
+/* 快速删除（卡片角标） */
+function quickDelete(e,type,id){
+  e.stopPropagation();
+  if(!confirm('确认删除这一条？')) return;
+  if(type==='projects') state.projects=state.projects.filter(x=>x.id!==id);
+  else if(type==='media') state.media=state.media.filter(x=>x.id!==id);
+  else state.research=state.research.filter(x=>x.id!==id);
+  [...state.projects,...state.media].forEach(o=>{
+    if(o.linked)o.linked=o.linked.filter(l=>l!==id);
+    if(o.refs)o.refs=o.refs.filter(l=>l!==id);
+  });
+  markDirty(); render();
+}
+
 /* 快速新建 */
 function quickAdd(type,cat){
   const id=uid(); const now=new Date().toISOString();
   if(type==='projects'){
-    state.projects.push({id,name:'',category:cat,scores:{},research:'',notes:'',tags:[],status:'想法',linked:[],createdAt:now,updatedAt:now});
+    state.projects.push({id,name:'',summary:'',category:cat,scores:{},research:'',notes:'',tags:[],status:'想法',linked:[],refs:[],createdAt:now,updatedAt:now});
   }else{
-    state.media.push({id,name:'',top:cat,mid:state.config.midCats[0]||'视频',bottom:'',platforms:'',scores:{},analysis:'',notes:'',tags:[],status:'想法',linked:[],createdAt:now,updatedAt:now});
+    state.media.push({id,name:'',summary:'',top:cat,mid:state.config.midCats[0]||'视频',bottom:'',platforms:'',scores:{},analysis:'',notes:'',tags:[],status:'想法',linked:[],refs:[],createdAt:now,updatedAt:now});
   }
   markDirty(); renderBoard(type); openDrawer(type,id,true);
+}
+function quickAddResearch(){
+  const id=uid(); const now=new Date().toISOString();
+  state.research.push({id,title:'',kind:state.config.researchKinds[0]||'通用',summary:'',body:'',tags:[],createdAt:now,updatedAt:now});
+  markDirty(); renderResearch(); openDrawer('research',id,true);
+}
+
+/* ============================ 研究资料 tab ============================ */
+function filteredResearch(){
+  let list=state.research.slice();
+  const q=state.ui.search.trim().toLowerCase();
+  if(q) list=list.filter(r=>[r.title,r.summary,r.body,r.kind,(r.tags||[]).join(' ')].join(' ').toLowerCase().includes(q));
+  const s=state.ui.sort;
+  list.sort((a,b)=>{
+    if(s==='name') return (a.title||'').localeCompare(b.title||'','zh');
+    if(s==='refs') return refCount(b.id)-refCount(a.id);
+    return (b.updatedAt||'').localeCompare(a.updatedAt||'');
+  });
+  return list;
+}
+function renderResearch(){
+  const list=filteredResearch();
+  const sel=v=>state.ui.sort===v?'selected':'';
+  const controls=`<div class="controls">
+     <div class="search">
+       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+       <input id="search" placeholder="搜索标题 / 内容 / 类型 / 标签…" value="${esc(state.ui.search)}">
+     </div>
+     <select class="ctl" id="sortsel">
+       <option value="updated" ${sel('updated')||(!['name','refs'].includes(state.ui.sort)?'selected':'')}>按更新时间</option>
+       <option value="refs" ${sel('refs')}>按被引用数</option>
+       <option value="name" ${sel('name')}>按名称</option>
+     </select>
+     <button class="btn primary" id="add-btn">＋ 新建研究</button>
+   </div>`;
+  const cards = list.length? list.map(researchCard).join('') : '<div class="empty" style="grid-column:1/-1">还没有研究资料。点右上「新建研究」写一份通用的盈利模式/行业研究/博主拆解，之后可在项目或方向里引用它。</div>';
+  document.getElementById('view').innerHTML = controls + `<div class="rgrid">${cards}</div>`;
+  const se=document.getElementById('search');
+  se.oninput=debounce(()=>{state.ui.search=se.value;renderResearch();const n=document.getElementById('search');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}},280);
+  document.getElementById('sortsel').onchange=e=>{state.ui.sort=e.target.value;renderResearch();};
+  document.getElementById('add-btn').onclick=quickAddResearch;
+}
+function researchCard(r){
+  const n=refCount(r.id);
+  const snip=((r.summary||'').trim()||(r.body||'').trim());
+  return `<div class="card rcard" onclick="openDrawer('research','${r.id}')">
+    <button class="cardx" title="删除" onclick="quickDelete(event,'research','${r.id}')">✕</button>
+    <div class="ttl">${esc(r.title||'未命名研究')}</div>
+    <div class="meta"><span class="kind" style="background:${kindColor(r.kind)}">${esc(r.kind||'通用')}</span>
+      <span class="refcnt">被引用 ${n}</span>${(r.tags||[]).slice(0,2).map(t=>`<span class="pill">#${esc(t)}</span>`).join('')}</div>
+    ${snip?`<div class="desc">${esc(snip)}</div>`:''}
+  </div>`;
 }
 
 /* ============================ 抽屉（编辑单条） ============================ */
 let drawerCtx=null;
 function openDrawer(type,id,isNew){
-  const arr=type==='projects'?state.projects:state.media;
+  const arr = type==='projects'?state.projects : type==='media'?state.media : state.research;
   const it=arr.find(x=>x.id===id); if(!it) return;
   drawerCtx={type,id};
-  document.getElementById('drawer-content').innerHTML = drawerHTML(it,type);
-  document.getElementById('drawer').classList.add('on');
-  document.getElementById('scrim').classList.add('on');
+  document.getElementById('detail-content').innerHTML = drawerHTML(it,type);
+  document.getElementById('detail').classList.add('on');
+  document.body.style.overflow='hidden';
+  document.getElementById('detail-body')?.scrollTo(0,0);
   bindDrawer(it,type);
-  if(isNew) setTimeout(()=>{const n=document.getElementById('f-name');if(n)n.focus();},250);
+  if(isNew) setTimeout(()=>{const n=document.getElementById('f-name')||document.getElementById('r-title');if(n)n.focus();},120);
 }
 function closeDrawer(){
-  document.getElementById('drawer').classList.remove('on');
-  document.getElementById('scrim').classList.remove('on');
+  document.getElementById('detail').classList.remove('on');
+  document.body.style.overflow='';
   drawerCtx=null;
-  renderBoard(state.ui.tab==='media'?'media':'projects');
+  render();
 }
 
 function drawerHTML(it,type){
+  if(type==='research') return researchHTML(it);
   const metrics = type==='projects'? state.config.projectMetrics : state.config.mediaMetrics;
   const isMedia = type==='media';
   const sc = scoreOf(it,metrics);
@@ -577,50 +676,107 @@ function drawerHTML(it,type){
 
   const tags=(it.tags||[]).map(t=>`<span class="tagchip">#${esc(t)} <b onclick="rmTag('${esc(t)}')">✕</b></span>`).join('');
 
+  // 引用的研究资料（可复用）
+  const refList=(it.refs||[]).map(rid=>{
+    const r=state.research.find(x=>x.id===rid); if(!r) return '';
+    return `<div class="refrow"><span class="kind" style="background:${kindColor(r.kind)}">${esc(r.kind||'通用')}</span><span class="rt">${esc(r.title||'未命名研究')}</span><span class="a" onclick="viewRef('${rid}')">查看</span><span class="x" onclick="rmRef('${rid}')">✕</span></div>`;
+  }).join('');
+  const refOpts=state.research.filter(r=>!(it.refs||[]).includes(r.id)).map(r=>`<option value="${r.id}">${esc(r.kind||'通用')} · ${esc(r.title||'未命名')}</option>`).join('');
+
   const bigField = isMedia
-    ? {label:'博主拆解 / 风格 / 分析', id:'f-analysis', val:it.analysis, ph:'对标博主、内容公式、节奏、人设、变现路径…（支持长文）'}
-    : {label:'盈利模式 / 行业研究资料', id:'f-research', val:it.research, ph:'商业模式、成本结构、竞品、市场数据、关键链接…（支持长文）'};
+    ? {label:'博主拆解 / 风格 / 分析（本方向专属补充）', id:'f-analysis', val:it.analysis, ph:'本方向特有的补充。通用的拆解请放到「研究资料」并在下方引用。'}
+    : {label:'盈利模式 / 行业研究（本项目专属补充）', id:'f-research', val:it.research, ph:'本项目特有的补充。通用的研究请放到「研究资料」并在下方引用。'};
 
   return `
-  <div class="dr-h">
+  <div class="detail-h">
+    <button class="back" onclick="closeDrawer()">← 返回</button>
     <span class="pill" style="background:${(isMedia?CAT_COLOR[it.top]:CAT_COLOR[it.category])};color:#fff;border:none">${isMedia?it.top:it.category}</span>
-    <span style="font-size:12px;color:var(--ink-soft)" id="dr-score">${sc!=null?'综合评分 '+sc:'未评分'}</span>
-    <button class="btn ghost sm x" onclick="closeDrawer()">✕</button>
+    <span class="nm" id="dr-name-h">${esc(it.name||'未命名')}</span>
+    <span style="font-size:12px;color:var(--ink-soft);margin-left:auto" id="dr-score">${sc!=null?'综合评分 '+sc:'未评分'}</span>
+    <button class="btn rust primary sm" onclick="saveDrawer()">完成并应用</button>
+    <button class="btn del-x sm" onclick="delItem()">删除</button>
   </div>
-  <div class="dr-b">
-    <div class="field"><input type="text" class="title-in" id="f-name" placeholder="${isMedia?'方向名称…':'项目名称…'}" value="${esc(it.name)}"></div>
-    ${catFields}
-    ${platformField}
-    <div class="field"><label>状态</label><select id="f-status">${statusSel}</select></div>
-
-    <div class="field"><label>评分维度${type==='projects'?'（优先考虑项目建议必填）':''}</label>
-      <div class="totalbox"><span class="lab">综合评分</span><span class="num" id="total-num">${sc!=null?sc:'–'}<small>/100</small></span></div>
-      ${metricRows}
-      <div class="hint">拖动滑块即记一次分；权重和维度可在「设置」里自定义。「越低越好」的维度会自动反向计入。</div>
+  <div class="detail-body" id="detail-body">
+   <div class="detail-grid">
+    <div class="detail-col">
+      <div class="field"><input type="text" class="title-in" id="f-name" placeholder="${isMedia?'方向名称…':'项目名称…'}" value="${esc(it.name)}"></div>
+      <div class="field"><label>简介</label><textarea id="f-summary" placeholder="一句话说清这是什么…" style="min-height:60px">${esc(it.summary||'')}</textarea></div>
+      ${catFields}
+      ${platformField}
+      <div class="field"><label>引用研究资料（通用 / 可复用）</label>
+        ${refList||'<div class="hint" style="margin-top:0">未引用任何研究</div>'}
+        ${state.research.length?`<select id="f-ref" style="margin-top:8px"><option value="">＋ 引用一份研究…</option>${refOpts}</select>`:'<div class="hint">研究库为空，去「研究资料」tab 新建后即可引用。</div>'}
+      </div>
+      <div class="field"><label>${bigField.label}</label>
+        <textarea id="${bigField.id}" style="min-height:200px" placeholder="${bigField.ph}">${esc(bigField.val)}</textarea>
+      </div>
+      <div class="field"><label>备注</label>
+        <textarea id="f-notes" style="min-height:120px" placeholder="随手记…">${esc(it.notes)}</textarea>
+      </div>
     </div>
 
-    <div class="field"><label>${bigField.label}</label>
-      <textarea id="${bigField.id}" style="min-height:140px" placeholder="${bigField.ph}">${esc(bigField.val)}</textarea>
-    </div>
+    <div class="detail-col">
+      <div class="side-panel">
+        <div class="field" style="margin-bottom:14px"><label>状态</label><select id="f-status">${statusSel}</select></div>
+        <div class="field" style="margin-bottom:0"><label>评分维度${type==='projects'?'（优先考虑建议必填）':''}</label>
+          <div class="totalbox"><span class="lab">综合评分</span><span class="num" id="total-num">${sc!=null?sc:'–'}<small>/100</small></span></div>
+          ${metricRows}
+          <div class="hint">拖动滑块即记一次分；维度与权重可在「设置」里自定义，「越低越好」自动反向计入。</div>
+        </div>
+      </div>
 
-    <div class="field"><label>备注</label>
-      <textarea id="f-notes" placeholder="随手记…">${esc(it.notes)}</textarea>
-    </div>
+      <div class="field" style="margin-top:18px"><label>标签</label>
+        <div class="tags-edit" id="tags-box">${tags}<input class="tag-in" id="tag-in" placeholder="加标签 ↵"></div>
+      </div>
 
-    <div class="field"><label>标签</label>
-      <div class="tags-edit" id="tags-box">${tags}<input class="tag-in" id="tag-in" placeholder="加标签 ↵"></div>
-    </div>
+      <div class="field"><label>${isMedia?'服务的项目':'关联的自媒体方向'}（交叉关联）</label>
+        ${linked||'<div class="hint" style="margin-top:0">暂无关联</div>'}
+        ${linkOpts?`<select id="f-link" style="margin-top:8px"><option value="">＋ 关联一个…</option>${linkOpts}</select>`:''}
+      </div>
 
-    <div class="field"><label>${isMedia?'服务的项目':'关联的自媒体方向'}（交叉关联）</label>
-      ${linked||'<div class="hint" style="margin-top:0">暂无关联</div>'}
-      ${linkOpts?`<select id="f-link" style="margin-top:8px"><option value="">＋ 关联一个…</option>${linkOpts}</select>`:''}
+      <div class="field"><div class="hint">创建：${(it.createdAt||'').slice(0,10)} ｜ 更新：${(it.updatedAt||'').slice(0,10)}</div></div>
     </div>
+   </div>
+  </div>`;
+}
 
-    <div class="field"><div class="hint">创建：${(it.createdAt||'').slice(0,10)} ｜ 更新：${(it.updatedAt||'').slice(0,10)}</div></div>
+function researchHTML(r){
+  const kinds=state.config.researchKinds.map(k=>`<option ${r.kind===k?'selected':''}>${esc(k)}</option>`).join('');
+  const tags=(r.tags||[]).map(t=>`<span class="tagchip">#${esc(t)} <b onclick="rmTag('${esc(t)}')">✕</b></span>`).join('');
+  const refsBy=[...state.projects.map(p=>({o:p,t:'projects',lab:'项目'})),...state.media.map(m=>({o:m,t:'media',lab:'方向'}))].filter(x=>(x.o.refs||[]).includes(r.id));
+  const backrefs=refsBy.map(x=>`<div class="backref" onclick="openDrawer('${x.t}','${x.o.id}')">↳ ${esc(x.o.name||'未命名')} <small style="color:var(--ink-soft)">(${x.lab})</small></div>`).join('');
+  return `
+  <div class="detail-h">
+    <button class="back" onclick="closeDrawer()">← 返回</button>
+    <span class="kind" style="background:${kindColor(r.kind)}">${esc(r.kind||'通用')}</span>
+    <span class="nm">${esc(r.title||'未命名研究')}</span>
+    <span style="font-size:12px;color:var(--ink-soft);margin-left:auto">被引用 ${refsBy.length}</span>
+    <button class="btn rust primary sm" onclick="saveDrawer()">完成并应用</button>
+    <button class="btn del-x sm" onclick="delItem()">删除</button>
   </div>
-  <div class="dr-f">
-    <button class="btn rust primary" onclick="saveDrawer()">完成并应用</button>
-    <button class="btn del-x" style="margin-left:auto" onclick="delItem()">删除</button>
+  <div class="detail-body" id="detail-body">
+   <div class="detail-grid">
+    <div class="detail-col">
+      <div class="field"><input type="text" class="title-in" id="r-title" placeholder="研究标题…" value="${esc(r.title)}"></div>
+      <div class="field"><label>简介</label><textarea id="r-summary" style="min-height:60px" placeholder="一句话概述…">${esc(r.summary||'')}</textarea></div>
+      <div class="field"><label>内容</label>
+        <textarea id="r-body" style="min-height:420px" placeholder="完整的盈利模式 / 行业研究 / 博主拆解：模式、数据、竞品、对标博主、关键链接…（支持长文）">${esc(r.body||'')}</textarea>
+      </div>
+    </div>
+    <div class="detail-col">
+      <div class="side-panel">
+        <div class="field" style="margin-bottom:0"><label>类型</label><select id="r-kind">${kinds}</select>
+          <div class="hint">类型可在「设置」里增删。</div></div>
+      </div>
+      <div class="field" style="margin-top:18px"><label>标签</label>
+        <div class="tags-edit" id="tags-box">${tags}<input class="tag-in" id="tag-in" placeholder="加标签 ↵"></div>
+      </div>
+      <div class="field"><label>被引用（${refsBy.length}）</label>
+        ${backrefs||'<div class="hint" style="margin-top:0">暂未被任何项目/方向引用</div>'}
+      </div>
+      <div class="field"><div class="hint">创建：${(r.createdAt||'').slice(0,10)} ｜ 更新：${(r.updatedAt||'').slice(0,10)}</div></div>
+    </div>
+   </div>
   </div>`;
 }
 
@@ -651,6 +807,11 @@ function bindDrawer(it,type){
   if(lk) lk.onchange=()=>{
     if(lk.value){it.linked=it.linked||[]; if(!it.linked.includes(lk.value)) it.linked.push(lk.value); refreshDrawer();}
   };
+  // 引用研究
+  const rf=document.getElementById('f-ref');
+  if(rf) rf.onchange=()=>{
+    if(rf.value){it.refs=it.refs||[]; if(!it.refs.includes(rf.value)) it.refs.push(rf.value); refreshDrawer();}
+  };
 }
 function refreshTags(it){
   const box=document.getElementById('tags-box');
@@ -662,36 +823,53 @@ function refreshTags(it){
     box.insertBefore(s,box.firstChild);
   });
 }
-function curItem(){const arr=drawerCtx.type==='projects'?state.projects:state.media;return arr.find(x=>x.id===drawerCtx.id);}
+function curItem(){const arr=drawerCtx.type==='projects'?state.projects:drawerCtx.type==='media'?state.media:state.research;return arr.find(x=>x.id===drawerCtx.id);}
 function rmTag(t){const it=curItem();it.tags=(it.tags||[]).filter(x=>x!==t);refreshTags(it);}
 function unlink(id){const it=curItem();it.linked=(it.linked||[]).filter(x=>x!==id);refreshDrawer();}
-function refreshDrawer(){const it=curItem();document.getElementById('drawer-content').innerHTML=drawerHTML(it,drawerCtx.type);bindDrawer(it,drawerCtx.type);}
+function rmRef(id){const it=curItem();it.refs=(it.refs||[]).filter(x=>x!==id);refreshDrawer();}
+function viewRef(rid){applyDrawerFields();markDirty();openDrawer('research',rid);}
+function refreshDrawer(){const it=curItem();document.getElementById('detail-content').innerHTML=drawerHTML(it,drawerCtx.type);bindDrawer(it,drawerCtx.type);}
 
-function saveDrawer(){
+function applyDrawerFields(){
   const it=curItem(); const type=drawerCtx.type;
-  it.name=(document.getElementById('f-name').value||'').trim();
-  it.status=document.getElementById('f-status').value;
-  it.notes=document.getElementById('f-notes').value;
-  if(type==='media'){
-    it.top=document.getElementById('f-top').value;
-    it.mid=document.getElementById('f-mid').value;
-    it.bottom=document.getElementById('f-bottom').value;
-    it.platforms=document.getElementById('f-platforms').value;
-    it.analysis=document.getElementById('f-analysis').value;
+  if(type==='research'){
+    it.title=(document.getElementById('r-title').value||'').trim();
+    it.kind=document.getElementById('r-kind').value;
+    it.summary=document.getElementById('r-summary').value;
+    it.body=document.getElementById('r-body').value;
   }else{
-    it.category=document.getElementById('f-cat').value;
-    it.research=document.getElementById('f-research').value;
+    it.name=(document.getElementById('f-name').value||'').trim();
+    it.summary=document.getElementById('f-summary').value;
+    it.status=document.getElementById('f-status').value;
+    it.notes=document.getElementById('f-notes').value;
+    if(type==='media'){
+      it.top=document.getElementById('f-top').value;
+      it.mid=document.getElementById('f-mid').value;
+      it.bottom=document.getElementById('f-bottom').value;
+      it.platforms=document.getElementById('f-platforms').value;
+      it.analysis=document.getElementById('f-analysis').value;
+    }else{
+      it.category=document.getElementById('f-cat').value;
+      it.research=document.getElementById('f-research').value;
+    }
   }
   it.updatedAt=new Date().toISOString();
+}
+function saveDrawer(){
+  applyDrawerFields();
   markDirty(); closeDrawer(); toast('已应用（记得点右上「保存」提交到仓库）');
 }
 function delItem(){
   if(!confirm('确认删除这一条？')) return;
-  const type=drawerCtx.type;
-  if(type==='projects') state.projects=state.projects.filter(x=>x.id!==drawerCtx.id);
-  else state.media=state.media.filter(x=>x.id!==drawerCtx.id);
-  // 清理反向关联
-  [...state.projects,...state.media].forEach(o=>{if(o.linked)o.linked=o.linked.filter(l=>l!==drawerCtx.id);});
+  const id=drawerCtx.id, type=drawerCtx.type;
+  if(type==='projects') state.projects=state.projects.filter(x=>x.id!==id);
+  else if(type==='media') state.media=state.media.filter(x=>x.id!==id);
+  else state.research=state.research.filter(x=>x.id!==id);
+  // 清理反向关联与引用
+  [...state.projects,...state.media].forEach(o=>{
+    if(o.linked)o.linked=o.linked.filter(l=>l!==id);
+    if(o.refs)o.refs=o.refs.filter(l=>l!==id);
+  });
   markDirty(); closeDrawer();
 }
 
@@ -758,6 +936,12 @@ function settingsHTML(){
       <label class="inl" style="margin-top:16px">底层类型</label>${catEditor(state.config.mediaBottom,'mediaBottom')}
     </div>
    </details>
+
+   <details class="acc"><summary>🧪 研究资料类型 <span class="chev">›</span></summary>
+    <div class="body">
+      <label class="inl">类型（盈利模式 / 行业研究 / 博主拆解…）</label>${catEditor(state.config.researchKinds,'researchKinds')}
+    </div>
+   </details>
    <div style="display:flex;justify-content:flex-end"><button class="btn rust primary" onclick="closeSettings();markDirty();render()">完成</button></div>`;
 }
 
@@ -768,7 +952,7 @@ function bindSettings(){
   });
   g('g-connect').onclick=async()=>{await ghLoad();};
   g('g-export').onclick=()=>{
-    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,research:state.research},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lab-database.json';a.click();
   };
   g('g-import').onchange=e=>{
@@ -776,7 +960,7 @@ function bindSettings(){
     const r=new FileReader(); r.onload=()=>{try{
       const d=JSON.parse(r.result);
       state.config=Object.assign(structuredClone(DEFAULT_CONFIG),d.config||{});
-      state.projects=d.projects||[]; state.media=d.media||[];
+      state.projects=d.projects||[]; state.media=d.media||[]; state.research=d.research||[];
       markDirty();closeSettings();render();toast('已导入');
     }catch(err){toast('导入失败：'+err.message,'err');}};r.readAsText(f);
   };
@@ -787,7 +971,7 @@ function bindSettings(){
     row.querySelector('[data-f=weight]').oninput=e=>{state.config[kind][i].weight=+e.target.value||0;saveLocal();};
     row.querySelector('[data-f=type]').onchange=e=>{state.config[kind][i].type=e.target.checked?'cost':'value';saveLocal();};
   });
-  ['midCats','mediaBottom'].forEach(kind=>{
+  ['midCats','mediaBottom','researchKinds'].forEach(kind=>{
     const inp=g('cat-in-'+kind);
     if(inp) inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim()){state.config[kind].push(inp.value.trim());saveLocal();openSettings();}};
   });
@@ -801,7 +985,6 @@ document.getElementById('tabs').onclick=e=>{const t=e.target.closest('.tab');if(
 document.getElementById('btn-save').onclick=ghSave;
 document.getElementById('btn-settings').onclick=openSettings;
 document.getElementById('modal-close').onclick=closeSettings;
-document.getElementById('scrim').onclick=closeDrawer;
 document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')closeSettings();};
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeDrawer();closeSettings();}
