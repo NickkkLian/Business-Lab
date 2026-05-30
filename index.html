@@ -47,9 +47,14 @@ input,textarea,select{font-family:inherit; font-size:14px; color:var(--ink)}
 .tab .cnt{font-family:"Space Mono",monospace;font-size:11px;opacity:.7}
 
 .sync{display:flex;align-items:center;gap:8px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--line-2)}
-.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(90,125,58,.18)}
-.dot.dirty{background:var(--rust);box-shadow:0 0 0 3px rgba(177,80,42,.18)}
+.syncchip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);background:var(--card);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.syncchip:hover{border-color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line-2);flex:none}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(63,125,46,.16)}
+.dot.dirty{background:var(--amber);box-shadow:0 0 0 3px rgba(176,116,20,.16)}
+.dot.syncing{background:var(--teal);box-shadow:0 0 0 3px rgba(21,122,114,.16);animation:pulse 1s infinite}
+.dot.err{background:var(--rust);box-shadow:0 0 0 3px rgba(187,77,43,.18)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .btn{border:1px solid var(--line-2);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:7px;transition:.15s}
 .btn:hover{border-color:var(--ink);transform:translateY(-1px)}
 .btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -219,11 +224,12 @@ label.inl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);mar
       <button class="tab" data-tab="dashboard">概览</button>
       <button class="tab" data-tab="projects">商业化项目 <span class="cnt" id="cnt-p"></span></button>
       <button class="tab" data-tab="media">自媒体方向 <span class="cnt" id="cnt-m"></span></button>
+      <button class="tab" data-tab="freelance">Freelance <span class="cnt" id="cnt-f"></span></button>
+      <button class="tab" data-tab="career">备选职业 <span class="cnt" id="cnt-c"></span></button>
       <button class="tab" data-tab="research">研究资料 <span class="cnt" id="cnt-r"></span></button>
     </div>
     <div class="sync">
-      <span class="dot" id="syncdot" title="连接状态"></span>
-      <button class="btn sm" id="btn-save" title="提交到私有仓库">保存</button>
+      <button class="syncchip" id="syncchip" title="点击立即同步 / 重试"><span class="dot" id="syncdot"></span><span id="synctext">未连接</span></button>
       <button class="btn sm ghost" id="btn-settings" title="设置">⚙</button>
     </div>
   </div>
@@ -281,25 +287,59 @@ const DEFAULT_CONFIG = {
     {id:'n6', name:'兴趣匹配', weight:1.5, type:'value'},
     {id:'n7', name:'起号速度', weight:1, type:'value'},
   ],
+  freelanceMetrics: [
+    {id:'f1', name:'单价/时薪', weight:2, type:'value'},
+    {id:'f2', name:'上手难度', weight:1, type:'cost'},
+    {id:'f3', name:'需求稳定', weight:1.5, type:'value'},
+    {id:'f4', name:'竞争程度', weight:1, type:'cost'},
+    {id:'f5', name:'兴趣匹配', weight:1.5, type:'value'},
+    {id:'f6', name:'可远程', weight:1, type:'value'},
+    {id:'f7', name:'成长性', weight:1, type:'value'},
+  ],
+  careerMetrics: [
+    {id:'c1', name:'薪资水平', weight:2, type:'value'},
+    {id:'c2', name:'入行门槛', weight:1.5, type:'cost'},
+    {id:'c3', name:'行业前景', weight:2, type:'value'},
+    {id:'c4', name:'工作强度', weight:1, type:'cost'},
+    {id:'c5', name:'兴趣匹配', weight:1.5, type:'value'},
+    {id:'c6', name:'稳定性', weight:1, type:'value'},
+    {id:'c7', name:'转行成本', weight:1, type:'cost'},
+  ],
 };
+
+/* 四个看板大类的统一配置 */
+const KINDS = {
+  projects:  {arr:'projects',  label:'商业化项目', noun:'项目', metrics:'projectMetrics',  bigKey:'research', bigLabel:'盈利模式 / 行业研究（本项目专属补充）', bigPh:'本项目特有的补充。通用的研究请放到「研究资料」并在上方引用。', cntId:'cnt-p'},
+  media:     {arr:'media',     label:'自媒体方向', noun:'方向', metrics:'mediaMetrics',    bigKey:'analysis', bigLabel:'博主拆解 / 风格 / 分析（本方向专属补充）', bigPh:'本方向特有的补充。通用的拆解请放到「研究资料」并在上方引用。', media:true, cntId:'cnt-m'},
+  freelance: {arr:'freelance', label:'Freelance',  noun:'机会', metrics:'freelanceMetrics', bigKey:'detail',  bigLabel:'接单渠道 / 报价 / 技能要求（专属补充）', bigPh:'接单平台、报价区间、所需技能、交付方式、客户类型…', cntId:'cnt-f'},
+  career:    {arr:'career',    label:'备选职业',   noun:'职业', metrics:'careerMetrics',   bigKey:'detail',  bigLabel:'行业前景 / 门槛 / 转行路径（专属补充）', bigPh:'岗位要求、薪资范围、所需技能证书、转行路径、目标公司…', cntId:'cnt-c'},
+};
+const BOARD_TYPES = ['projects','media','freelance','career'];
+const metricsFor = type => state.config[KINDS[type].metrics] || [];
+const arrFor = type => state[KINDS[type].arr];
 
 let state = {
   config: structuredClone(DEFAULT_CONFIG),
   projects: [],
   media: [],
+  freelance: [],
+  career: [],
   research: [],
   gh: {owner:'', repo:'', token:'', path:'business.json', branch:'main'},
   ui: {tab:'dashboard', search:'', sort:'score', filter:'all'},
   sha: null,
   dirty: false,
   connected: false,
+  syncStatus: 'idle', // idle | pending | syncing | synced | error | local
+  syncMsg: '',
 };
 
 /* ============================ 持久化(本地) ============================ */
 const LS = 'lab_db_v1';
 function saveLocal(){
   localStorage.setItem(LS, JSON.stringify({
-    config:state.config, projects:state.projects, media:state.media, research:state.research,
+    config:state.config, projects:state.projects, media:state.media,
+    freelance:state.freelance, career:state.career, research:state.research,
     gh:state.gh, ui:state.ui, sha:state.sha, dirty:state.dirty
   }));
 }
@@ -309,6 +349,7 @@ function loadLocal(){
     if(r){
       state.config = Object.assign(structuredClone(DEFAULT_CONFIG), r.config||{});
       state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
+      state.freelance = r.freelance||[]; state.career = r.career||[];
       state.gh = Object.assign(state.gh, r.gh||{});
       state.ui = Object.assign(state.ui, r.ui||{});
       state.sha = r.sha||null; state.dirty = !!r.dirty;
@@ -323,48 +364,86 @@ function ghHeaders(){return {'Authorization':'token '+state.gh.token,'Accept':'a
 function ghUrl(){return `https://api.github.com/repos/${state.gh.owner}/${state.gh.repo}/contents/${state.gh.path}`;}
 
 async function ghLoad(){
-  const {owner,repo,token,path} = state.gh;
+  const {owner,repo,token} = state.gh;
   if(!owner||!repo||!token){toast('请先在设置里填写仓库与 Token','err');return false;}
+  setSync('syncing','载入中…');
   try{
-    const res = await fetch(ghUrl()+'?ref='+encodeURIComponent(state.gh.branch||'main'), {headers:ghHeaders()});
-    if(res.status===404){ // 文件不存在 → 视为空数据库
-      state.sha=null; state.connected=true; toast('已连接(私有库暂无数据文件,保存后会自动创建)');
-      saveLocal(); render(); return true;
+    const res = await fetch(ghUrl()+'?ref='+encodeURIComponent(state.gh.branch||'main')+'&t='+Date.now(), {headers:ghHeaders(),cache:'no-store'});
+    if(res.status===404){ // 文件不存在 → 视为空数据库，首次同步会创建
+      state.sha=null; state.connected=true; setSync('pending','私有库暂无数据文件，将自动创建');
+      saveLocal(); render(); scheduleSync(300); return true;
     }
-    if(!res.ok){toast('连接失败: '+res.status+' '+res.statusText,'err');return false;}
+    if(res.status===401){setSync('error','Token 无效或已过期');openSettings();return false;}
+    if(!res.ok){setSync('error','连接失败 '+res.status);return false;}
     const j = await res.json();
     const data = JSON.parse(b64decode(j.content));
     state.sha = j.sha;
     state.config = Object.assign(structuredClone(DEFAULT_CONFIG), data.config||{});
     state.projects = data.projects||[]; state.media = data.media||[]; state.research = data.research||[];
+    state.freelance = data.freelance||[]; state.career = data.career||[];
     state.connected = true; state.dirty=false;
-    saveLocal(); render(); toast('已从私有仓库载入数据'); return true;
-  }catch(e){toast('载入出错: '+e.message,'err');return false;}
+    saveLocal(); render(); setSync('synced','已载入'); return true;
+  }catch(e){setSync('error','载入出错: '+e.message);return false;}
 }
 
-async function ghSave(){
-  const {owner,repo,token} = state.gh;
-  if(!owner||!repo||!token){openSettings();toast('请先填写仓库与 Token','err');return;}
-  const payload = {version:2, config:state.config, projects:state.projects, media:state.media, research:state.research, savedAt:new Date().toISOString()};
-  const body = {
-    message:`update db @ ${new Date().toLocaleString('zh-CN')}`,
-    content:b64encode(JSON.stringify(payload,null,2)),
-    branch:state.gh.branch||'main'
-  };
-  if(state.sha) body.sha = state.sha;
-  const sb=document.getElementById('btn-save'); sb.disabled=true; sb.textContent='保存中…';
+// 取最新 sha（用于冲突自愈）
+async function ghFetchSha(){
   try{
-    const res = await fetch(ghUrl(),{method:'PUT',headers:ghHeaders(),body:JSON.stringify(body)});
-    if(!res.ok){const e=await res.json().catch(()=>({}));toast('保存失败: '+(e.message||res.status),'err');return;}
-    const j = await res.json(); state.sha = j.content.sha;
-    state.dirty=false; state.connected=true; saveLocal(); render(); toast('已提交到私有仓库 ✓');
-  }catch(e){toast('保存出错: '+e.message,'err');}
-  finally{sb.disabled=false;sb.textContent='保存';}
+    const res = await fetch(ghUrl()+'?ref='+encodeURIComponent(state.gh.branch||'main')+'&t='+Date.now(),{headers:ghHeaders(),cache:'no-store'});
+    if(res.status===404) return null;
+    if(!res.ok) return undefined;
+    const j=await res.json(); return j.sha||null;
+  }catch(e){return undefined;}
 }
+
+// 单次 PUT；遇 sha 冲突自动取最新 sha 重试一次
+async function ghPutOnce(){
+  const payload = {version:2, config:state.config, projects:state.projects, media:state.media,
+    freelance:state.freelance, career:state.career, research:state.research, savedAt:new Date().toISOString()};
+  const mkBody = sha => {const b={message:`update @ ${new Date().toLocaleString('zh-CN')}`,content:b64encode(JSON.stringify(payload,null,2)),branch:state.gh.branch||'main'};if(sha)b.sha=sha;return JSON.stringify(b);};
+  let res = await fetch(ghUrl(),{method:'PUT',headers:ghHeaders(),body:mkBody(state.sha)});
+  if(res.status===409 || res.status===422){ // sha 过期/缺失 → 取最新再试
+    const fresh = await ghFetchSha();
+    if(fresh!==undefined){ state.sha = fresh; res = await fetch(ghUrl(),{method:'PUT',headers:ghHeaders(),body:mkBody(fresh)}); }
+  }
+  return res;
+}
+
+/* ====== 自动同步调度 ====== */
+let syncTimer=null, syncing=false, editSeq=0, syncedSeq=0, retryCount=0;
+function setSync(status,msg){state.syncStatus=status; if(msg!=null)state.syncMsg=msg; updateSyncDot();}
+function scheduleSync(delay){
+  if(!(state.gh.owner&&state.gh.repo&&state.gh.token)){setSync('local','仅本地（未连接仓库）');return;}
+  clearTimeout(syncTimer);
+  if(state.syncStatus!=='error') setSync('pending','待同步');
+  syncTimer=setTimeout(doSync, delay==null?1800:delay);
+}
+async function doSync(){
+  if(!(state.gh.owner&&state.gh.repo&&state.gh.token)){setSync('local','仅本地（未连接仓库）');return;}
+  if(syncing) return;            // 正在同步，结束后会按 editSeq 自动再同步
+  syncing=true; const seq=editSeq;
+  setSync('syncing','同步中…');
+  try{
+    const res = await ghPutOnce();
+    if(res.status===401){syncing=false;setSync('error','Token 无效/过期，点此重新设置');return;}
+    if(res.status===403){syncing=false;setSync('error','无写入权限或触发限流');return;}
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error(e.message||('HTTP '+res.status));}
+    const j=await res.json(); state.sha=j.content.sha;
+    state.connected=true; retryCount=0; syncedSeq=seq;
+    if(editSeq===seq){state.dirty=false; setSync('synced','已同步');}
+    else {setSync('pending','待同步'); scheduleSync(800);}  // 同步期间又有新改动
+    saveLocal();
+  }catch(e){
+    retryCount++;
+    setSync('error','同步失败：'+e.message+(retryCount<5?'（将自动重试）':'，点此重试'));
+    if(retryCount<5) syncTimer=setTimeout(doSync, Math.min(2000*retryCount,15000)); // 退避重试
+  }finally{ syncing=false; }
+}
+function forceSync(){retryCount=0;clearTimeout(syncTimer);doSync();}
 
 /* ============================ 工具 ============================ */
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-function markDirty(){state.dirty=true; saveLocal(); updateSyncDot();}
+function markDirty(){state.dirty=true; editSeq++; saveLocal(); scheduleSync();}
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast on'+(type==='err'?' err':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',2600);}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
@@ -384,12 +463,21 @@ function hasAnyScore(item){return item.scores && Object.values(item.scores).some
 
 /* ============================ 渲染：顶部 ============================ */
 function updateSyncDot(){
-  const d=document.getElementById('syncdot');
-  d.className='dot'+(state.dirty?' dirty':(state.connected?' on':''));
-  d.title = state.dirty?'有未保存的修改':(state.connected?'已连接':'未连接');
-  document.getElementById('cnt-p').textContent = state.projects.length||'';
-  document.getElementById('cnt-m').textContent = state.media.length||'';
-  document.getElementById('cnt-r').textContent = state.research.length||'';
+  const d=document.getElementById('syncdot'), t=document.getElementById('synctext');
+  const st=state.syncStatus;
+  let cls='dot', txt=state.syncMsg||'';
+  if(st==='syncing'){cls+=' syncing'; txt=txt||'同步中…';}
+  else if(st==='error'){cls+=' err'; txt=txt||'同步失败';}
+  else if(st==='pending'){cls+=' dirty'; txt=txt||'待同步';}
+  else if(st==='synced'){cls+=' on'; txt=txt||'已同步';}
+  else if(st==='local'){cls+=''; txt=txt||'仅本地';}
+  else {txt=txt||(state.connected?'已连接':'未连接');}
+  if(d) d.className=cls;
+  if(t) t.textContent=txt;
+  const set=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n||'';};
+  set('cnt-p',state.projects.length); set('cnt-m',state.media.length);
+  set('cnt-f',state.freelance.length); set('cnt-c',state.career.length);
+  set('cnt-r',state.research.length);
 }
 
 function render(){
@@ -397,49 +485,46 @@ function render(){
   updateSyncDot();
   const v=document.getElementById('view');
   if(state.ui.tab==='dashboard') v.innerHTML=renderDashboard();
-  else if(state.ui.tab==='projects') renderBoard('projects');
-  else if(state.ui.tab==='media') renderBoard('media');
-  else renderResearch();
+  else if(state.ui.tab==='research') renderResearch();
+  else if(BOARD_TYPES.includes(state.ui.tab)) renderBoard(state.ui.tab);
+  else v.innerHTML=renderDashboard();
   saveLocal();
 }
 
 /* ============================ 概览 ============================ */
 function renderDashboard(){
-  const p=state.projects, m=state.media;
-  const pri = p.filter(x=>x.category==='优先考虑');
-  const topP = [...p].map(x=>({x,s:scoreOf(x,state.config.projectMetrics)})).filter(o=>o.s!=null).sort((a,b)=>b.s-a.s).slice(0,5);
-  const topM = [...m].map(x=>({x,s:scoreOf(x,state.config.mediaMetrics)})).filter(o=>o.s!=null).sort((a,b)=>b.s-a.s).slice(0,5);
-  const byCat = c => `${p.filter(x=>x.category===c).length} / ${m.filter(x=>x.top===c).length}`;
   const stat=(k,v,sub)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}${sub?` <small>${sub}</small>`:''}</div></div>`;
-  const rankRow=(o,i,metrics,type)=>`<div class="rank" onclick="openDrawer('${type}','${o.x.id}')" style="cursor:pointer">
+  const rankRow=(o,i,type)=>`<div class="rank" onclick="openDrawer('${type}','${o.x.id}')" style="cursor:pointer">
       <span class="i">${String(i+1).padStart(2,'0')}</span>
       <span class="nm">${esc(o.x.name||'未命名')}</span>
       <span class="sc">${o.s}</span></div>`;
-  const rankList=(arr,metrics,type)=> arr.length? arr.map((o,i)=>rankRow(o,i,metrics,type)).join('') : '<div class="empty">还没有评分项</div>';
+  const topN=type=>[...arrFor(type)].map(x=>({x,s:scoreOf(x,metricsFor(type))})).filter(o=>o.s!=null).sort((a,b)=>b.s-a.s).slice(0,5);
+  const catOf=(x,type)=> type==='media'? x.top : x.category;
+  const panel=type=>{const arr=topN(type);return `<div class="panel"><h3>${KINDS[type].label} · Top 5</h3>${arr.length?arr.map((o,i)=>rankRow(o,i,type)).join(''):'<div class="empty">还没有评分项</div>'}</div>`;};
   return `
   <div class="dash">
-    ${stat('项目总数', p.length, '个')}
-    ${stat('优先考虑·项目', pri.length, '个')}
-    ${stat('自媒体方向', m.length, '个')}
-    ${stat('研究资料', state.research.length, '份')}
+    ${BOARD_TYPES.map(t=>stat(KINDS[t].label, arrFor(t).length, '个')).join('')}
   </div>
   <div class="dash" style="grid-template-columns:repeat(3,1fr)">
-    ${TOP_CATS_DEFAULT.map(c=>`<div class="stat"><div class="k" style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:2px;background:${CAT_COLOR[c]}"></span>${c}</div><div class="v" style="font-size:24px">${byCat(c)} <small>项目 / 方向</small></div></div>`).join('')}
+    ${TOP_CATS_DEFAULT.map(c=>{
+       const counts=BOARD_TYPES.map(t=>arrFor(t).filter(x=>catOf(x,t)===c).length).reduce((a,b)=>a+b,0);
+       return `<div class="stat"><div class="k" style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:2px;background:${CAT_COLOR[c]}"></span>${c}</div><div class="v" style="font-size:26px">${counts} <small>条（全部大类）</small></div></div>`;
+     }).join('')}
   </div>
   <div class="dash-2">
-    <div class="panel"><h3>项目评分榜 · Top 5</h3>${rankList(topP,state.config.projectMetrics,'projects')}</div>
-    <div class="panel"><h3>自媒体方向榜 · Top 5</h3>${rankList(topM,state.config.mediaMetrics,'media')}</div>
+    ${BOARD_TYPES.map(panel).join('')}
   </div>`;
 }
 
-/* ============================ 看板（项目 / 自媒体共用） ============================ */
+/* ============================ 看板（四个大类共用） ============================ */
+function catKey(type){return type==='media'?'top':'category';}
 function filteredItems(type){
-  const arr = type==='projects'? state.projects : state.media;
-  const metrics = type==='projects'? state.config.projectMetrics : state.config.mediaMetrics;
+  const arr = arrFor(type);
+  const metrics = metricsFor(type);
   let list = arr.slice();
   const q = state.ui.search.trim().toLowerCase();
   if(q) list = list.filter(x=>{
-    const blob = [x.name, x.summary, x.notes, x.research, x.analysis, (x.tags||[]).join(' '),
+    const blob = [x.name, x.summary, x.notes, x.research, x.analysis, x.detail, (x.tags||[]).join(' '),
       x.mid, x.bottom, x.platforms, x.status].join(' ').toLowerCase();
     return blob.includes(q);
   });
@@ -455,7 +540,8 @@ function filteredItems(type){
 }
 
 function renderBoard(type){
-  const metrics = type==='projects'? state.config.projectMetrics : state.config.mediaMetrics;
+  const metrics = metricsFor(type);
+  const ck = catKey(type);
   const list = filteredItems(type);
   const statusOpts = ['<option value="all">全部状态</option>'].concat(STATUS.map(s=>`<option value="${s.k}" ${state.ui.filter===s.k?'selected':''}>${s.k}</option>`)).join('');
   const controls = `
@@ -470,11 +556,11 @@ function renderBoard(type){
        <option value="name" ${state.ui.sort==='name'?'selected':''}>按名称</option>
      </select>
      <select class="ctl" id="filtersel">${statusOpts}</select>
-     <button class="btn primary" id="add-btn">＋ 新建${type==='projects'?'项目':'方向'}</button>
+     <button class="btn primary" id="add-btn">＋ 新建${KINDS[type].noun}</button>
    </div>`;
 
   const cols = TOP_CATS_DEFAULT.map(cat=>{
-    const items = list.filter(x=> (type==='projects'? x.category : x.top) === cat);
+    const items = list.filter(x=> x[ck] === cat);
     const cards = items.map(x=>cardHTML(x,type,metrics)).join('');
     return `<div class="col" data-cat="${cat}" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${type}','${cat}')">
       <div class="col-h"><span class="tag" style="background:${CAT_COLOR[cat]}"></span><h3>${cat}</h3><span class="n">${items.length}</span></div>
@@ -485,7 +571,6 @@ function renderBoard(type){
 
   document.getElementById('view').innerHTML = controls + `<div class="board">${cols}</div>`;
 
-  // 绑定
   const se=document.getElementById('search');
   se.oninput=debounce(e=>{state.ui.search=se.value;renderBoard(type);
     const n=document.getElementById('search'); if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);} },280);
@@ -493,7 +578,6 @@ function renderBoard(type){
   document.getElementById('filtersel').onchange=e=>{state.ui.filter=e.target.value;renderBoard(type);};
   document.getElementById('add-btn').onclick=()=>quickAdd(type,'感觉好玩');
 }
-function rebindFilters(){}
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 
 function cardHTML(x,type,metrics){
@@ -523,9 +607,8 @@ function onDragOver(e){e.preventDefault();e.currentTarget.classList.add('drag-ov
 function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
 function onDrop(e,type,cat){
   e.preventDefault();e.currentTarget.classList.remove('drag-over');
-  const arr = type==='projects'?state.projects:state.media;
-  const it = arr.find(x=>x.id===dragId); if(!it) return;
-  if(type==='projects') it.category=cat; else it.top=cat;
+  const it = arrFor(type).find(x=>x.id===dragId); if(!it) return;
+  it[catKey(type)]=cat;
   it.updatedAt=new Date().toISOString();
   markDirty(); renderBoard(type);
 }
@@ -534,24 +617,27 @@ function onDrop(e,type,cat){
 function quickDelete(e,type,id){
   e.stopPropagation();
   if(!confirm('确认删除这一条？')) return;
-  if(type==='projects') state.projects=state.projects.filter(x=>x.id!==id);
-  else if(type==='media') state.media=state.media.filter(x=>x.id!==id);
-  else state.research=state.research.filter(x=>x.id!==id);
-  [...state.projects,...state.media].forEach(o=>{
-    if(o.linked)o.linked=o.linked.filter(l=>l!==id);
-    if(o.refs)o.refs=o.refs.filter(l=>l!==id);
-  });
+  if(type==='research') state.research=state.research.filter(x=>x.id!==id);
+  else { const k=KINDS[type].arr; state[k]=state[k].filter(x=>x.id!==id); }
+  cleanupRefs(id);
   markDirty(); render();
 }
+function allItems(){return [...state.projects,...state.media,...state.freelance,...state.career];}
+function cleanupRefs(id){allItems().forEach(o=>{
+  if(o.linked)o.linked=o.linked.filter(l=>l!==id);
+  if(o.refs)o.refs=o.refs.filter(l=>l!==id);
+});}
 
 /* 快速新建 */
 function quickAdd(type,cat){
   const id=uid(); const now=new Date().toISOString();
-  if(type==='projects'){
-    state.projects.push({id,name:'',summary:'',category:cat,scores:{},research:'',notes:'',tags:[],status:'想法',linked:[],refs:[],createdAt:now,updatedAt:now});
+  const base={id,name:'',summary:'',scores:{},notes:'',tags:[],status:'想法',linked:[],refs:[],createdAt:now,updatedAt:now};
+  if(type==='media'){
+    Object.assign(base,{top:cat,mid:state.config.midCats[0]||'视频',bottom:'',platforms:'',analysis:''});
   }else{
-    state.media.push({id,name:'',summary:'',top:cat,mid:state.config.midCats[0]||'视频',bottom:'',platforms:'',scores:{},analysis:'',notes:'',tags:[],status:'想法',linked:[],refs:[],createdAt:now,updatedAt:now});
+    base.category=cat; base[KINDS[type].bigKey]='';
   }
+  arrFor(type).push(base);
   markDirty(); renderBoard(type); openDrawer(type,id,true);
 }
 function quickAddResearch(){
@@ -610,7 +696,7 @@ function researchCard(r){
 /* ============================ 抽屉（编辑单条） ============================ */
 let drawerCtx=null;
 function openDrawer(type,id,isNew){
-  const arr = type==='projects'?state.projects : type==='media'?state.media : state.research;
+  const arr = type==='research'?state.research:arrFor(type);
   const it=arr.find(x=>x.id===id); if(!it) return;
   drawerCtx={type,id};
   document.getElementById('detail-content').innerHTML = drawerHTML(it,type);
@@ -621,6 +707,7 @@ function openDrawer(type,id,isNew){
   if(isNew) setTimeout(()=>{const n=document.getElementById('f-name')||document.getElementById('r-title');if(n)n.focus();},120);
 }
 function closeDrawer(){
+  if(drawerCtx){ applyDrawerFields(); markDirty(); }
   document.getElementById('detail').classList.remove('on');
   document.body.style.overflow='';
   drawerCtx=null;
@@ -629,7 +716,7 @@ function closeDrawer(){
 
 function drawerHTML(it,type){
   if(type==='research') return researchHTML(it);
-  const metrics = type==='projects'? state.config.projectMetrics : state.config.mediaMetrics;
+  const metrics = metricsFor(type);
   const isMedia = type==='media';
   const sc = scoreOf(it,metrics);
   const statusSel = STATUS.map(s=>`<option ${it.status===s.k?'selected':''}>${s.k}</option>`).join('');
@@ -668,13 +755,14 @@ function drawerHTML(it,type){
     </div>`;
   }).join('');
 
-  // 链接
-  const linkTargets = isMedia? state.projects : state.media;
-  const linked = (it.linked||[]).map(lid=>{
+  // 链接（仅商业化项目 ↔ 自媒体方向之间互相关联）
+  const linkable = type==='projects'||type==='media';
+  const linkTargets = type==='media'? state.projects : (type==='projects'? state.media : []);
+  const linked = linkable? (it.linked||[]).map(lid=>{
     const t=linkTargets.find(o=>o.id===lid); if(!t) return '';
     return `<div class="linkrow"><span>${isMedia?'↳ 服务于项目':'↳ 关联方向'}：<b>${esc(t.name||'未命名')}</b></span><span class="x" onclick="unlink('${lid}')">移除</span></div>`;
-  }).join('');
-  const linkOpts = linkTargets.filter(o=>!(it.linked||[]).includes(o.id)).map(o=>`<option value="${o.id}">${esc(o.name||'未命名')}</option>`).join('');
+  }).join(''):'';
+  const linkOpts = linkable? linkTargets.filter(o=>!(it.linked||[]).includes(o.id)).map(o=>`<option value="${o.id}">${esc(o.name||'未命名')}</option>`).join(''):'';
 
   const tags=(it.tags||[]).map(t=>`<span class="tagchip">#${esc(t)} <b onclick="rmTag('${esc(t)}')">✕</b></span>`).join('');
 
@@ -685,9 +773,7 @@ function drawerHTML(it,type){
   }).join('');
   const refOpts=state.research.filter(r=>!(it.refs||[]).includes(r.id)).map(r=>`<option value="${r.id}">${esc(r.kind||'通用')} · ${esc(r.title||'未命名')}</option>`).join('');
 
-  const bigField = isMedia
-    ? {label:'博主拆解 / 风格 / 分析（本方向专属补充）', id:'f-analysis', val:it.analysis, ph:'本方向特有的补充。通用的拆解请放到「研究资料」并在下方引用。'}
-    : {label:'盈利模式 / 行业研究（本项目专属补充）', id:'f-research', val:it.research, ph:'本项目特有的补充。通用的研究请放到「研究资料」并在下方引用。'};
+  const bigField = {label:KINDS[type].bigLabel, id:'f-big', val:it[KINDS[type].bigKey], ph:KINDS[type].bigPh};
 
   return `
   <div class="detail-h">
@@ -731,10 +817,10 @@ function drawerHTML(it,type){
         <div class="tags-edit" id="tags-box">${tags}<input class="tag-in" id="tag-in" placeholder="加标签 ↵"></div>
       </div>
 
-      <div class="field"><label>${isMedia?'服务的项目':'关联的自媒体方向'}（交叉关联）</label>
+      ${linkable?`<div class="field"><label>${isMedia?'服务的项目':'关联的自媒体方向'}（交叉关联）</label>
         ${linked||'<div class="hint" style="margin-top:0">暂无关联</div>'}
         ${linkOpts?`<select id="f-link" style="margin-top:8px"><option value="">＋ 关联一个…</option>${linkOpts}</select>`:''}
-      </div>
+      </div>`:''}
 
       <div class="field"><div class="hint">创建：${(it.createdAt||'').slice(0,10)} ｜ 更新：${(it.updatedAt||'').slice(0,10)}</div></div>
     </div>
@@ -745,7 +831,7 @@ function drawerHTML(it,type){
 function researchHTML(r){
   const kinds=state.config.researchKinds.map(k=>`<option ${r.kind===k?'selected':''}>${esc(k)}</option>`).join('');
   const tags=(r.tags||[]).map(t=>`<span class="tagchip">#${esc(t)} <b onclick="rmTag('${esc(t)}')">✕</b></span>`).join('');
-  const refsBy=[...state.projects.map(p=>({o:p,t:'projects',lab:'项目'})),...state.media.map(m=>({o:m,t:'media',lab:'方向'}))].filter(x=>(x.o.refs||[]).includes(r.id));
+  const refsBy=BOARD_TYPES.flatMap(t=>arrFor(t).map(o=>({o,t,lab:KINDS[t].noun}))).filter(x=>(x.o.refs||[]).includes(r.id));
   const backrefs=refsBy.map(x=>`<div class="backref" onclick="openDrawer('${x.t}','${x.o.id}')">↳ ${esc(x.o.name||'未命名')} <small style="color:var(--ink-soft)">(${x.lab})</small></div>`).join('');
   return `
   <div class="detail-h">
@@ -783,7 +869,7 @@ function researchHTML(r){
 }
 
 function bindDrawer(it,type){
-  const metrics = type==='projects'? state.config.projectMetrics : state.config.mediaMetrics;
+  const metrics = type==='research'? [] : metricsFor(type);
   // 滑块实时
   document.querySelectorAll('.msl').forEach(sl=>{
     sl.oninput=()=>{
@@ -793,6 +879,7 @@ function bindDrawer(it,type){
       const sc=scoreOf(it,metrics);
       document.getElementById('total-num').innerHTML = (sc!=null?sc:'–')+'<small>/100</small>';
       document.getElementById('dr-score').textContent = sc!=null?'综合评分 '+sc:'未评分';
+      it.updatedAt=new Date().toISOString(); markDirty();
     };
   });
   // 标签
@@ -801,19 +888,26 @@ function bindDrawer(it,type){
     if(e.key==='Enter'&&ti.value.trim()){
       it.tags=it.tags||[]; const v=ti.value.trim().replace(/^#/,'');
       if(!it.tags.includes(v)) it.tags.push(v);
-      ti.value=''; refreshTags(it);
+      ti.value=''; refreshTags(it); markDirty();
     }
   };
   // 关联
   const lk=document.getElementById('f-link');
   if(lk) lk.onchange=()=>{
-    if(lk.value){it.linked=it.linked||[]; if(!it.linked.includes(lk.value)) it.linked.push(lk.value); refreshDrawer();}
+    if(lk.value){it.linked=it.linked||[]; if(!it.linked.includes(lk.value)) it.linked.push(lk.value); markDirty(); refreshDrawer();}
   };
   // 引用研究
   const rf=document.getElementById('f-ref');
   if(rf) rf.onchange=()=>{
-    if(rf.value){it.refs=it.refs||[]; if(!it.refs.includes(rf.value)) it.refs.push(rf.value); refreshDrawer();}
+    if(rf.value){it.refs=it.refs||[]; if(!it.refs.includes(rf.value)) it.refs.push(rf.value); markDirty(); refreshDrawer();}
   };
+  // 边输入边自动应用 → 触发自动同步（无需手动保存）
+  const body=document.getElementById('detail-body');
+  if(body){
+    const auto=debounce(()=>{applyDrawerFields();markDirty();},600);
+    body.addEventListener('input',auto);
+    body.addEventListener('change',()=>{applyDrawerFields();markDirty();});
+  }
 }
 function refreshTags(it){
   const box=document.getElementById('tags-box');
@@ -825,15 +919,16 @@ function refreshTags(it){
     box.insertBefore(s,box.firstChild);
   });
 }
-function curItem(){const arr=drawerCtx.type==='projects'?state.projects:drawerCtx.type==='media'?state.media:state.research;return arr.find(x=>x.id===drawerCtx.id);}
-function rmTag(t){const it=curItem();it.tags=(it.tags||[]).filter(x=>x!==t);refreshTags(it);}
-function unlink(id){const it=curItem();it.linked=(it.linked||[]).filter(x=>x!==id);refreshDrawer();}
-function rmRef(id){const it=curItem();it.refs=(it.refs||[]).filter(x=>x!==id);refreshDrawer();}
+function curItem(){const arr=drawerCtx.type==='research'?state.research:arrFor(drawerCtx.type);return arr.find(x=>x.id===drawerCtx.id);}
+function rmTag(t){const it=curItem();it.tags=(it.tags||[]).filter(x=>x!==t);refreshTags(it);markDirty();}
+function unlink(id){const it=curItem();it.linked=(it.linked||[]).filter(x=>x!==id);markDirty();refreshDrawer();}
+function rmRef(id){const it=curItem();it.refs=(it.refs||[]).filter(x=>x!==id);markDirty();refreshDrawer();}
 function viewRef(rid){applyDrawerFields();markDirty();openDrawer('research',rid);}
 function refreshDrawer(){const it=curItem();document.getElementById('detail-content').innerHTML=drawerHTML(it,drawerCtx.type);bindDrawer(it,drawerCtx.type);}
 
 function applyDrawerFields(){
-  const it=curItem(); const type=drawerCtx.type;
+  if(!drawerCtx) return;
+  const it=curItem(); if(!it) return; const type=drawerCtx.type;
   if(type==='research'){
     it.title=(document.getElementById('r-title').value||'').trim();
     it.kind=document.getElementById('r-kind').value;
@@ -849,29 +944,23 @@ function applyDrawerFields(){
       it.mid=document.getElementById('f-mid').value;
       it.bottom=document.getElementById('f-bottom').value;
       it.platforms=document.getElementById('f-platforms').value;
-      it.analysis=document.getElementById('f-analysis').value;
     }else{
       it.category=document.getElementById('f-cat').value;
-      it.research=document.getElementById('f-research').value;
     }
+    it[KINDS[type].bigKey]=document.getElementById('f-big').value;
   }
   it.updatedAt=new Date().toISOString();
 }
 function saveDrawer(){
   applyDrawerFields();
-  markDirty(); closeDrawer(); toast('已应用（记得点右上「保存」提交到仓库）');
+  markDirty(); closeDrawer();
 }
 function delItem(){
   if(!confirm('确认删除这一条？')) return;
   const id=drawerCtx.id, type=drawerCtx.type;
-  if(type==='projects') state.projects=state.projects.filter(x=>x.id!==id);
-  else if(type==='media') state.media=state.media.filter(x=>x.id!==id);
-  else state.research=state.research.filter(x=>x.id!==id);
-  // 清理反向关联与引用
-  [...state.projects,...state.media].forEach(o=>{
-    if(o.linked)o.linked=o.linked.filter(l=>l!==id);
-    if(o.refs)o.refs=o.refs.filter(l=>l!==id);
-  });
+  if(type==='research') state.research=state.research.filter(x=>x.id!==id);
+  else { const k=KINDS[type].arr; state[k]=state[k].filter(x=>x.id!==id); }
+  cleanupRefs(id);
   markDirty(); closeDrawer();
 }
 
@@ -932,6 +1021,14 @@ function settingsHTML(){
     <div class="body"><div id="mm-list">${metricEditor(state.config.mediaMetrics,'mediaMetrics')}</div></div>
    </details>
 
+   <details class="acc"><summary>💼 Freelance 评分维度 <span class="chev">›</span></summary>
+    <div class="body"><div id="fm-list">${metricEditor(state.config.freelanceMetrics,'freelanceMetrics')}</div></div>
+   </details>
+
+   <details class="acc"><summary>🧭 备选职业评分维度 <span class="chev">›</span></summary>
+    <div class="body"><div id="cm-list">${metricEditor(state.config.careerMetrics,'careerMetrics')}</div></div>
+   </details>
+
    <details class="acc"><summary>🗂 自媒体中层 / 底层分类 <span class="chev">›</span></summary>
     <div class="body">
       <label class="inl">中层（视频 / 图文）</label>${catEditor(state.config.midCats,'midCats')}
@@ -954,7 +1051,7 @@ function bindSettings(){
   });
   g('g-connect').onclick=async()=>{await ghLoad();};
   g('g-export').onclick=()=>{
-    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,research:state.research},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,research:state.research},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lab-database.json';a.click();
   };
   g('g-import').onchange=e=>{
@@ -963,6 +1060,7 @@ function bindSettings(){
       const d=JSON.parse(r.result);
       state.config=Object.assign(structuredClone(DEFAULT_CONFIG),d.config||{});
       state.projects=d.projects||[]; state.media=d.media||[]; state.research=d.research||[];
+      state.freelance=d.freelance||[]; state.career=d.career||[];
       markDirty();closeSettings();render();toast('已导入');
     }catch(err){toast('导入失败：'+err.message,'err');}};r.readAsText(f);
   };
@@ -984,19 +1082,22 @@ function rmCat(kind,i){state.config[kind].splice(i,1);saveLocal();openSettings()
 
 /* ============================ 事件 / 启动 ============================ */
 document.getElementById('tabs').onclick=e=>{const t=e.target.closest('.tab');if(t){state.ui.tab=t.dataset.tab;render();}};
-document.getElementById('btn-save').onclick=ghSave;
+document.getElementById('syncchip').onclick=forceSync;
 document.getElementById('btn-settings').onclick=openSettings;
 document.getElementById('modal-close').onclick=closeSettings;
 document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')closeSettings();};
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeDrawer();closeSettings();}
-  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();ghSave();}
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();forceSync();}
 });
+// 关闭/切走标签页前，若仍有未同步内容，尽力补一次同步
+window.addEventListener('beforeunload',e=>{ if(drawerCtx)applyDrawerFields(); if(state.dirty){forceSync(); e.preventDefault(); e.returnValue='';} });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(drawerCtx)applyDrawerFields(); if(state.dirty)forceSync(); } });
 
 loadLocal();
 render();
-// 若已有连接信息，自动尝试载入最新
 if(state.gh.owner&&state.gh.repo&&state.gh.token){ ghLoad(); }
+else { setSync('local','仅本地（未连接仓库）'); }
 </script>
 </body>
 </html>
