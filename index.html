@@ -226,6 +226,7 @@ label.inl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);mar
       <button class="tab" data-tab="media">自媒体方向 <span class="cnt" id="cnt-m"></span></button>
       <button class="tab" data-tab="freelance">Freelance <span class="cnt" id="cnt-f"></span></button>
       <button class="tab" data-tab="career">备选职业 <span class="cnt" id="cnt-c"></span></button>
+      <button class="tab" data-tab="topics">研究方向 <span class="cnt" id="cnt-t"></span></button>
       <button class="tab" data-tab="research">研究资料 <span class="cnt" id="cnt-r"></span></button>
     </div>
     <div class="sync">
@@ -305,6 +306,15 @@ const DEFAULT_CONFIG = {
     {id:'c6', name:'稳定性', weight:1, type:'value'},
     {id:'c7', name:'转行成本', weight:1, type:'cost'},
   ],
+  topicsMetrics: [
+    {id:'t1', name:'好奇/兴趣', weight:2, type:'value'},
+    {id:'t2', name:'可深入程度', weight:1.5, type:'value'},
+    {id:'t3', name:'资料易得', weight:1, type:'value'},
+    {id:'t4', name:'潜在产出', weight:1.5, type:'value'},
+    {id:'t5', name:'与现有方向相关', weight:1, type:'value'},
+    {id:'t6', name:'投入成本', weight:1, type:'cost'},
+    {id:'t7', name:'难度', weight:1, type:'cost'},
+  ],
 };
 
 /* 四个看板大类的统一配置 */
@@ -313,8 +323,9 @@ const KINDS = {
   media:     {arr:'media',     label:'自媒体方向', noun:'方向', metrics:'mediaMetrics',    bigKey:'analysis', bigLabel:'博主拆解 / 风格 / 分析（本方向专属补充）', bigPh:'本方向特有的补充。通用的拆解请放到「研究资料」并在上方引用。', media:true, cntId:'cnt-m'},
   freelance: {arr:'freelance', label:'Freelance',  noun:'机会', metrics:'freelanceMetrics', bigKey:'detail',  bigLabel:'接单渠道 / 报价 / 技能要求（专属补充）', bigPh:'接单平台、报价区间、所需技能、交付方式、客户类型…', cntId:'cnt-f'},
   career:    {arr:'career',    label:'备选职业',   noun:'职业', metrics:'careerMetrics',   bigKey:'detail',  bigLabel:'行业前景 / 门槛 / 转行路径（专属补充）', bigPh:'岗位要求、薪资范围、所需技能证书、转行路径、目标公司…', cntId:'cnt-c'},
+  topics:    {arr:'topics',    label:'研究方向',   noun:'研究方向', metrics:'topicsMetrics', bigKey:'detail',  bigLabel:'研究笔记 / 资料 / 想法（专属补充）', bigPh:'为什么觉得好玩、想搞清楚什么、已知线索、参考链接、可能延伸出的项目或内容…', cntId:'cnt-t'},
 };
-const BOARD_TYPES = ['projects','media','freelance','career'];
+const BOARD_TYPES = ['projects','media','freelance','career','topics'];
 const metricsFor = type => state.config[KINDS[type].metrics] || [];
 const arrFor = type => state[KINDS[type].arr];
 
@@ -324,6 +335,7 @@ let state = {
   media: [],
   freelance: [],
   career: [],
+  topics: [],
   research: [],
   gh: {owner:'', repo:'', token:'', path:'business.json', branch:'main'},
   ui: {tab:'dashboard', search:'', sort:'score', filter:'all'},
@@ -339,7 +351,7 @@ const LS = 'lab_db_v1';
 function saveLocal(){
   localStorage.setItem(LS, JSON.stringify({
     config:state.config, projects:state.projects, media:state.media,
-    freelance:state.freelance, career:state.career, research:state.research,
+    freelance:state.freelance, career:state.career, topics:state.topics, research:state.research,
     gh:state.gh, ui:state.ui, sha:state.sha, dirty:state.dirty
   }));
 }
@@ -349,7 +361,7 @@ function loadLocal(){
     if(r){
       state.config = Object.assign(structuredClone(DEFAULT_CONFIG), r.config||{});
       state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
-      state.freelance = r.freelance||[]; state.career = r.career||[];
+      state.freelance = r.freelance||[]; state.career = r.career||[]; state.topics = r.topics||[];
       state.gh = Object.assign(state.gh, r.gh||{});
       state.ui = Object.assign(state.ui, r.ui||{});
       state.sha = r.sha||null; state.dirty = !!r.dirty;
@@ -380,7 +392,7 @@ async function ghLoad(){
     state.sha = j.sha;
     state.config = Object.assign(structuredClone(DEFAULT_CONFIG), data.config||{});
     state.projects = data.projects||[]; state.media = data.media||[]; state.research = data.research||[];
-    state.freelance = data.freelance||[]; state.career = data.career||[];
+    state.freelance = data.freelance||[]; state.career = data.career||[]; state.topics = data.topics||[];
     state.connected = true; state.dirty=false;
     saveLocal(); render(); setSync('synced','已载入'); return true;
   }catch(e){setSync('error','载入出错: '+e.message);return false;}
@@ -399,7 +411,7 @@ async function ghFetchSha(){
 // 单次 PUT；遇 sha 冲突自动取最新 sha 重试一次
 async function ghPutOnce(){
   const payload = {version:2, config:state.config, projects:state.projects, media:state.media,
-    freelance:state.freelance, career:state.career, research:state.research, savedAt:new Date().toISOString()};
+    freelance:state.freelance, career:state.career, topics:state.topics, research:state.research, savedAt:new Date().toISOString()};
   const mkBody = sha => {const b={message:`update @ ${new Date().toLocaleString('zh-CN')}`,content:b64encode(JSON.stringify(payload,null,2)),branch:state.gh.branch||'main'};if(sha)b.sha=sha;return JSON.stringify(b);};
   let res = await fetch(ghUrl(),{method:'PUT',headers:ghHeaders(),body:mkBody(state.sha)});
   if(res.status===409 || res.status===422){ // sha 过期/缺失 → 取最新再试
@@ -477,6 +489,7 @@ function updateSyncDot(){
   const set=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n||'';};
   set('cnt-p',state.projects.length); set('cnt-m',state.media.length);
   set('cnt-f',state.freelance.length); set('cnt-c',state.career.length);
+  set('cnt-t',state.topics.length);
   set('cnt-r',state.research.length);
 }
 
@@ -502,7 +515,7 @@ function renderDashboard(){
   const catOf=(x,type)=> type==='media'? x.top : x.category;
   const panel=type=>{const arr=topN(type);return `<div class="panel"><h3>${KINDS[type].label} · Top 5</h3>${arr.length?arr.map((o,i)=>rankRow(o,i,type)).join(''):'<div class="empty">还没有评分项</div>'}</div>`;};
   return `
-  <div class="dash">
+  <div class="dash" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
     ${BOARD_TYPES.map(t=>stat(KINDS[t].label, arrFor(t).length, '个')).join('')}
   </div>
   <div class="dash" style="grid-template-columns:repeat(3,1fr)">
@@ -622,7 +635,7 @@ function quickDelete(e,type,id){
   cleanupRefs(id);
   markDirty(); render();
 }
-function allItems(){return [...state.projects,...state.media,...state.freelance,...state.career];}
+function allItems(){return BOARD_TYPES.flatMap(t=>arrFor(t));}
 function cleanupRefs(id){allItems().forEach(o=>{
   if(o.linked)o.linked=o.linked.filter(l=>l!==id);
   if(o.refs)o.refs=o.refs.filter(l=>l!==id);
@@ -1029,6 +1042,10 @@ function settingsHTML(){
     <div class="body"><div id="cm-list">${metricEditor(state.config.careerMetrics,'careerMetrics')}</div></div>
    </details>
 
+   <details class="acc"><summary>🔬 研究方向评分维度 <span class="chev">›</span></summary>
+    <div class="body"><div id="tm-list">${metricEditor(state.config.topicsMetrics,'topicsMetrics')}</div></div>
+   </details>
+
    <details class="acc"><summary>🗂 自媒体中层 / 底层分类 <span class="chev">›</span></summary>
     <div class="body">
       <label class="inl">中层（视频 / 图文）</label>${catEditor(state.config.midCats,'midCats')}
@@ -1051,7 +1068,7 @@ function bindSettings(){
   });
   g('g-connect').onclick=async()=>{await ghLoad();};
   g('g-export').onclick=()=>{
-    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,research:state.research},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,topics:state.topics,research:state.research},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lab-database.json';a.click();
   };
   g('g-import').onchange=e=>{
@@ -1060,7 +1077,7 @@ function bindSettings(){
       const d=JSON.parse(r.result);
       state.config=Object.assign(structuredClone(DEFAULT_CONFIG),d.config||{});
       state.projects=d.projects||[]; state.media=d.media||[]; state.research=d.research||[];
-      state.freelance=d.freelance||[]; state.career=d.career||[];
+      state.freelance=d.freelance||[]; state.career=d.career||[]; state.topics=d.topics||[];
       markDirty();closeSettings();render();toast('已导入');
     }catch(err){toast('导入失败：'+err.message,'err');}};r.readAsText(f);
   };
