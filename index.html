@@ -134,6 +134,10 @@ select.ctl{padding:9px 12px;border:1px solid var(--line-2);background:var(--card
 #detail-content{flex:1;min-height:0;display:flex;flex-direction:column}
 .detail-h{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:13px 22px;display:flex;align-items:center;gap:12px;z-index:5;flex-wrap:wrap}
 .detail-h .nm{font-family:var(--serif);font-weight:700;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.pill.pub{background:#e8f3ec;border-color:#bfe0cb;color:var(--green)}
+.pubtoggle{border:1px solid var(--line-2);background:var(--card);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px}
+.pubtoggle.on{background:#e8f3ec;border-color:var(--green);color:var(--green)}
+.pubtoggle:hover{border-color:var(--green)}
 .back{border:1px solid var(--line-2);background:var(--card);border-radius:10px;padding:7px 13px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .back:hover{border-color:var(--ink)}
 .detail-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:30px 22px 90px}
@@ -338,6 +342,8 @@ let state = {
   topics: [],
   research: [],
   gh: {owner:'', repo:'', token:'', path:'business.json', branch:'main'},
+  pub: {enabled:false, owner:'', repo:'', path:'showcase/public.json', branch:'main'},
+  pubSha: null,
   ui: {tab:'dashboard', search:'', sort:'score', filter:'all'},
   sha: null,
   dirty: false,
@@ -352,7 +358,7 @@ function saveLocal(){
   localStorage.setItem(LS, JSON.stringify({
     config:state.config, projects:state.projects, media:state.media,
     freelance:state.freelance, career:state.career, topics:state.topics, research:state.research,
-    gh:state.gh, ui:state.ui, sha:state.sha, dirty:state.dirty
+    gh:state.gh, pub:state.pub, pubSha:state.pubSha, ui:state.ui, sha:state.sha, dirty:state.dirty
   }));
 }
 function loadLocal(){
@@ -363,6 +369,7 @@ function loadLocal(){
       state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
       state.freelance = r.freelance||[]; state.career = r.career||[]; state.topics = r.topics||[];
       state.gh = Object.assign(state.gh, r.gh||{});
+      state.pub = Object.assign(state.pub, r.pub||{}); state.pubSha = r.pubSha||null;
       state.ui = Object.assign(state.ui, r.ui||{});
       state.sha = r.sha||null; state.dirty = !!r.dirty;
     }
@@ -445,6 +452,7 @@ async function doSync(){
     if(editSeq===seq){state.dirty=false; setSync('synced','已同步');}
     else {setSync('pending','待同步'); scheduleSync(800);}  // 同步期间又有新改动
     saveLocal();
+    if(state.pub.enabled) publishShowcase(false); // 自动发布（最佳努力，不阻塞）
   }catch(e){
     retryCount++;
     setSync('error','同步失败：'+e.message+(retryCount<5?'（将自动重试）':'，点此重试'));
@@ -452,6 +460,74 @@ async function doSync(){
   }finally{ syncing=false; }
 }
 function forceSync(){retryCount=0;clearTimeout(syncTimer);doSync();}
+
+/* ============================ 对外展示（导出 / 发布） ============================ */
+function publicCount(){
+  let n=0;
+  BOARD_TYPES.forEach(t=>arrFor(t).forEach(x=>{if(x.public)n++;}));
+  state.research.forEach(r=>{if(r.public)n++;});
+  return n;
+}
+// 构建对外展示数据：仅含勾选公开的条目，剔除内部评分与私人备注
+function buildShowcase(){
+  const sections=[];
+  BOARD_TYPES.forEach(t=>{
+    const items=arrFor(t).filter(x=>x.public).map(x=>({
+      id:x.id,
+      name:x.name||'未命名',
+      summary:x.summary||'',
+      category:catKey(t)==='top'?x.top:x.category,
+      content:x[KINDS[t].bigKey]||'',
+      tags:x.tags||[],
+      updatedAt:x.updatedAt||''
+    }));
+    if(items.length) sections.push({type:t, label:KINDS[t].label, items});
+  });
+  const rs=state.research.filter(r=>r.public).map(r=>({
+    id:r.id, name:r.title||'未命名研究', summary:r.summary||'',
+    category:r.kind||'通用', content:r.body||'', tags:r.tags||[], updatedAt:r.updatedAt||''
+  }));
+  if(rs.length) sections.push({type:'research', label:'研究资料', items:rs});
+  return {
+    title: state.config.showcaseTitle || 'My Database',
+    generatedAt: new Date().toISOString(),
+    sections
+  };
+}
+function exportShowcase(){
+  if(publicCount()===0){toast('还没有勾选「公开展示」的条目','err');return;}
+  const data=buildShowcase();
+  const safe=(data.title||'showcase').replace(/[^\w\u4e00-\u9fa5-]+/g,'_');
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safe+'-public.json';a.click();
+  toast(`已导出 ${publicCount()} 条展示数据`);
+}
+// 发布到公开仓库（manual=true 时给出明确提示）
+let publishing=false;
+async function publishShowcase(manual){
+  const p=state.pub;
+  if(!p.owner||!p.repo){ if(manual){openSettings();toast('请先填写公开仓库','err');} return; }
+  if(!state.gh.token){ if(manual)toast('需要 Token（在仓库连接里填写）','err'); return; }
+  if(publishing) return; publishing=true;
+  try{
+    const url=`https://api.github.com/repos/${p.owner}/${p.repo}/contents/${p.path}`;
+    const branch=p.branch||'main';
+    const content=b64encode(JSON.stringify(buildShowcase(),null,2));
+    const mk=sha=>{const b={message:`update showcase @ ${new Date().toLocaleString('zh-CN')}`,content,branch};if(sha)b.sha=sha;return JSON.stringify(b);};
+    let res=await fetch(url,{method:'PUT',headers:ghHeaders(),body:mk(state.pubSha)});
+    if(res.status===409||res.status===422){ // sha 过期 → 取最新重试
+      const g=await fetch(url+'?ref='+encodeURIComponent(branch)+'&t='+Date.now(),{headers:ghHeaders(),cache:'no-store'});
+      const fresh = g.status===404?null:(g.ok?(await g.json()).sha:undefined);
+      if(fresh!==undefined){state.pubSha=fresh; res=await fetch(url,{method:'PUT',headers:ghHeaders(),body:mk(fresh)});}
+    }
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error(e.message||('HTTP '+res.status));}
+    const j=await res.json(); state.pubSha=j.content.sha; saveLocal();
+    if(manual) toast(`已发布 ${publicCount()} 条到公开仓库 ✓`);
+  }catch(e){
+    if(manual) toast('发布失败：'+e.message+'（确认 Token 对公开仓库有写权限）','err');
+    else console.warn('showcase publish failed:',e.message);
+  }finally{ publishing=false; }
+}
 
 /* ============================ 工具 ============================ */
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -600,13 +676,14 @@ function cardHTML(x,type,metrics){
   const status = x.status? `<span class="pill" style="display:flex;align-items:center;gap:5px"><span class="statusdot" style="background:${statusColor(x.status)}"></span>${esc(x.status)}</span>`:'';
   const tags=(x.tags||[]).slice(0,3).map(t=>`<span class="pill">#${esc(t)}</span>`).join('');
   const refp=(x.refs&&x.refs.length)?`<span class="pill">📎 研究×${x.refs.length}</span>`:'';
+  const pub=x.public?`<span class="pill pub">🌐 展示</span>`:'';
   const snip = ((x.summary||'').trim() || (x.notes||'').trim());
   return `<div class="card" draggable="true" data-id="${x.id}"
       ondragstart="onDragStart(event,'${x.id}')" ondragend="onDragEnd(event)"
       onclick="openDrawer('${type}','${x.id}')">
     <button class="cardx" title="删除" onclick="quickDelete(event,'${type}','${x.id}')">✕</button>
     <div class="ttl">${esc(x.name||'未命名')} ${sc!=null?`<span class="scorebadge" style="margin-left:auto;color:${sc>=70?'var(--green)':sc>=45?'var(--amber)':'var(--rust)'}">${sc}</span>`:''}</div>
-    <div class="meta">${path}${plat}${status}${tags}${refp}</div>
+    <div class="meta">${path}${plat}${status}${tags}${refp}${pub}</div>
     ${sc!=null?`<div class="bar"><i style="width:${sc}%"></i></div>`:''}
     ${snip?`<div class="note-snip">${esc(snip)}</div>`:''}
   </div>`;
@@ -701,7 +778,7 @@ function researchCard(r){
     <button class="cardx" title="删除" onclick="quickDelete(event,'research','${r.id}')">✕</button>
     <div class="ttl">${esc(r.title||'未命名研究')}</div>
     <div class="meta"><span class="kind" style="background:${kindColor(r.kind)}">${esc(r.kind||'通用')}</span>
-      <span class="refcnt">被引用 ${n}</span>${(r.tags||[]).slice(0,2).map(t=>`<span class="pill">#${esc(t)}</span>`).join('')}</div>
+      <span class="refcnt">被引用 ${n}</span>${r.public?'<span class="pill pub">🌐 展示</span>':''}${(r.tags||[]).slice(0,2).map(t=>`<span class="pill">#${esc(t)}</span>`).join('')}</div>
     ${snip?`<div class="desc">${esc(snip)}</div>`:''}
   </div>`;
 }
@@ -794,6 +871,7 @@ function drawerHTML(it,type){
     <span class="pill" style="background:${(isMedia?CAT_COLOR[it.top]:CAT_COLOR[it.category])};color:#fff;border:none">${isMedia?it.top:it.category}</span>
     <span class="nm" id="dr-name-h">${esc(it.name||'未命名')}</span>
     <span style="font-size:12px;color:var(--ink-soft);margin-left:auto" id="dr-score">${sc!=null?'综合评分 '+sc:'未评分'}</span>
+    <button class="pubtoggle ${it.public?'on':''}" id="pub-toggle" onclick="togglePublic(this)">🌐 ${it.public?'已公开展示':'公开展示'}</button>
     <button class="btn rust primary sm" onclick="saveDrawer()">完成并应用</button>
     <button class="btn del-x sm" onclick="delItem()">删除</button>
   </div>
@@ -852,6 +930,7 @@ function researchHTML(r){
     <span class="kind" style="background:${kindColor(r.kind)}">${esc(r.kind||'通用')}</span>
     <span class="nm">${esc(r.title||'未命名研究')}</span>
     <span style="font-size:12px;color:var(--ink-soft);margin-left:auto">被引用 ${refsBy.length}</span>
+    <button class="pubtoggle ${r.public?'on':''}" id="pub-toggle" onclick="togglePublic(this)">🌐 ${r.public?'已公开展示':'公开展示'}</button>
     <button class="btn rust primary sm" onclick="saveDrawer()">完成并应用</button>
     <button class="btn del-x sm" onclick="delItem()">删除</button>
   </div>
@@ -937,6 +1016,13 @@ function rmTag(t){const it=curItem();it.tags=(it.tags||[]).filter(x=>x!==t);refr
 function unlink(id){const it=curItem();it.linked=(it.linked||[]).filter(x=>x!==id);markDirty();refreshDrawer();}
 function rmRef(id){const it=curItem();it.refs=(it.refs||[]).filter(x=>x!==id);markDirty();refreshDrawer();}
 function viewRef(rid){applyDrawerFields();markDirty();openDrawer('research',rid);}
+function togglePublic(btn){
+  const it=curItem(); if(!it) return;
+  it.public=!it.public; it.updatedAt=new Date().toISOString();
+  btn.classList.toggle('on', !!it.public);
+  btn.textContent='🌐 '+(it.public?'已公开展示':'公开展示');
+  markDirty();
+}
 function refreshDrawer(){const it=curItem();document.getElementById('detail-content').innerHTML=drawerHTML(it,drawerCtx.type);bindDrawer(it,drawerCtx.type);}
 
 function applyDrawerFields(){
@@ -1058,6 +1144,32 @@ function settingsHTML(){
       <label class="inl">类型（盈利模式 / 行业研究 / 博主拆解…）</label>${catEditor(state.config.researchKinds,'researchKinds')}
     </div>
    </details>
+
+   <details class="acc"><summary>🌐 对外展示 / 发布到个人网站 <span class="chev">›</span></summary>
+    <div class="body">
+      <div class="hint" style="margin-bottom:10px;color:var(--ink-soft)">
+        在任意条目详情页右上角点「🌐 公开展示」勾选要对外展示的内容。导出/发布只会包含被勾选的条目，并自动**剔除内部评分与私人备注**（只含名称、简介、正文、标签、分类）。当前已勾选 <b>${publicCount()}</b> 条。</div>
+      <label class="inl">这个库的展示标题</label>
+      <input class="full" id="pub-title" value="${esc(state.config.showcaseTitle||'')}" placeholder="如：我的商业想法库">
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" id="pub-export">⬇ 导出展示数据 JSON</button>
+      </div>
+
+      <label class="inl" style="margin-top:18px;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="pub-enabled" ${state.pub.enabled?'checked':''}> 自动发布到公开仓库（个人网站自动同步）</label>
+      <div class="hint" style="margin:2px 0 10px;color:var(--ink-soft)">勾选后，每次自动同步都会把展示数据写到下面的<b>公开</b>仓库；个人网站读取它即可自动更新。需要你的 Token 对该公开仓库也有写权限。不想自动也可只用上面的手动导出。</div>
+      <div class="row2">
+        <div><label class="inl">公开仓库 用户名/组织</label><input class="full" id="pub-owner" value="${esc(state.pub.owner)}" placeholder="可填托管本应用的公开仓库 owner"></div>
+        <div><label class="inl">公开仓库名</label><input class="full" id="pub-repo" value="${esc(state.pub.repo)}" placeholder="如 my-databases"></div>
+      </div>
+      <div class="row2">
+        <div><label class="inl">文件路径</label><input class="full" id="pub-path" value="${esc(state.pub.path)}" placeholder="showcase/public.json"></div>
+        <div><label class="inl">分支</label><input class="full" id="pub-branch" value="${esc(state.pub.branch)}" placeholder="main"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="pub-now">立即发布到公开仓库</button></div>
+      <div class="hint" style="margin-top:10px;color:var(--ink-soft)">发布后，数据地址通常是：<br><code style="font-size:11px">https://&lt;owner&gt;.github.io/&lt;repo&gt;/&lt;path&gt;</code><br>或 <code style="font-size:11px">https://raw.githubusercontent.com/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;path&gt;</code>。把这个地址填进个人网站的 showcase.html 即可。</div>
+    </div>
+   </details>
    <div style="display:flex;justify-content:flex-end"><button class="btn rust primary" onclick="closeSettings();markDirty();render()">完成</button></div>`;
 }
 
@@ -1067,6 +1179,12 @@ function bindSettings(){
     g('g-'+k).oninput=e=>{state.gh[k]=e.target.value.trim();saveLocal();};
   });
   g('g-connect').onclick=async()=>{await ghLoad();};
+  // 对外展示 / 发布
+  if(g('pub-title')) g('pub-title').oninput=e=>{state.config.showcaseTitle=e.target.value;markDirty();};
+  if(g('pub-export')) g('pub-export').onclick=exportShowcase;
+  if(g('pub-enabled')) g('pub-enabled').onchange=e=>{state.pub.enabled=e.target.checked;saveLocal();};
+  ['owner','repo','path','branch'].forEach(k=>{ const el=g('pub-'+k); if(el) el.oninput=ev=>{state.pub[k]=ev.target.value.trim();saveLocal();}; });
+  if(g('pub-now')) g('pub-now').onclick=()=>publishShowcase(true);
   g('g-export').onclick=()=>{
     const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,topics:state.topics,research:state.research},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lab-database.json';a.click();
