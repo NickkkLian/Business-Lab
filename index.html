@@ -342,8 +342,6 @@ let state = {
   topics: [],
   research: [],
   gh: {owner:'', repo:'', token:'', path:'business.json', branch:'main'},
-  pub: {enabled:false, owner:'', repo:'', path:'showcase/public.json', branch:'main'},
-  pubSha: null,
   ui: {tab:'dashboard', search:'', sort:'score', filter:'all'},
   sha: null,
   dirty: false,
@@ -358,7 +356,7 @@ function saveLocal(){
   localStorage.setItem(LS, JSON.stringify({
     config:state.config, projects:state.projects, media:state.media,
     freelance:state.freelance, career:state.career, topics:state.topics, research:state.research,
-    gh:state.gh, pub:state.pub, pubSha:state.pubSha, ui:state.ui, sha:state.sha, dirty:state.dirty
+    gh:state.gh, ui:state.ui, sha:state.sha, dirty:state.dirty
   }));
 }
 function loadLocal(){
@@ -369,7 +367,6 @@ function loadLocal(){
       state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
       state.freelance = r.freelance||[]; state.career = r.career||[]; state.topics = r.topics||[];
       state.gh = Object.assign(state.gh, r.gh||{});
-      state.pub = Object.assign(state.pub, r.pub||{}); state.pubSha = r.pubSha||null;
       state.ui = Object.assign(state.ui, r.ui||{});
       state.sha = r.sha||null; state.dirty = !!r.dirty;
     }
@@ -452,7 +449,6 @@ async function doSync(){
     if(editSeq===seq){state.dirty=false; setSync('synced','已同步');}
     else {setSync('pending','待同步'); scheduleSync(800);}  // 同步期间又有新改动
     saveLocal();
-    if(state.pub.enabled) publishShowcase(false); // 自动发布（最佳努力，不阻塞）
   }catch(e){
     retryCount++;
     setSync('error','同步失败：'+e.message+(retryCount<5?'（将自动重试）':'，点此重试'));
@@ -501,32 +497,6 @@ function exportShowcase(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safe+'-public.json';a.click();
   toast(`已导出 ${publicCount()} 条展示数据`);
-}
-// 发布到公开仓库（manual=true 时给出明确提示）
-let publishing=false;
-async function publishShowcase(manual){
-  const p=state.pub;
-  if(!p.owner||!p.repo){ if(manual){openSettings();toast('请先填写公开仓库','err');} return; }
-  if(!state.gh.token){ if(manual)toast('需要 Token（在仓库连接里填写）','err'); return; }
-  if(publishing) return; publishing=true;
-  try{
-    const url=`https://api.github.com/repos/${p.owner}/${p.repo}/contents/${p.path}`;
-    const branch=p.branch||'main';
-    const content=b64encode(JSON.stringify(buildShowcase(),null,2));
-    const mk=sha=>{const b={message:`update showcase @ ${new Date().toLocaleString('zh-CN')}`,content,branch};if(sha)b.sha=sha;return JSON.stringify(b);};
-    let res=await fetch(url,{method:'PUT',headers:ghHeaders(),body:mk(state.pubSha)});
-    if(res.status===409||res.status===422){ // sha 过期 → 取最新重试
-      const g=await fetch(url+'?ref='+encodeURIComponent(branch)+'&t='+Date.now(),{headers:ghHeaders(),cache:'no-store'});
-      const fresh = g.status===404?null:(g.ok?(await g.json()).sha:undefined);
-      if(fresh!==undefined){state.pubSha=fresh; res=await fetch(url,{method:'PUT',headers:ghHeaders(),body:mk(fresh)});}
-    }
-    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error(e.message||('HTTP '+res.status));}
-    const j=await res.json(); state.pubSha=j.content.sha; saveLocal();
-    if(manual) toast(`已发布 ${publicCount()} 条到公开仓库 ✓`);
-  }catch(e){
-    if(manual) toast('发布失败：'+e.message+'（确认 Token 对公开仓库有写权限）','err');
-    else console.warn('showcase publish failed:',e.message);
-  }finally{ publishing=false; }
 }
 
 /* ============================ 工具 ============================ */
@@ -1145,29 +1115,16 @@ function settingsHTML(){
     </div>
    </details>
 
-   <details class="acc"><summary>🌐 对外展示 / 发布到个人网站 <span class="chev">›</span></summary>
+   <details class="acc"><summary>🌐 对外展示 / 导出 <span class="chev">›</span></summary>
     <div class="body">
       <div class="hint" style="margin-bottom:10px;color:var(--ink-soft)">
-        在任意条目详情页右上角点「🌐 公开展示」勾选要对外展示的内容。导出/发布只会包含被勾选的条目，并自动**剔除内部评分与私人备注**（只含名称、简介、正文、标签、分类）。当前已勾选 <b>${publicCount()}</b> 条。</div>
+        在任意条目详情页右上角点「🌐 公开展示」勾选要对外展示的内容。导出只会包含被勾选的条目，并自动剔除内部评分与私人备注（只含名称、简介、正文、标签、分类）。当前已勾选 <b>${publicCount()}</b> 条。</div>
       <label class="inl">这个库的展示标题</label>
       <input class="full" id="pub-title" value="${esc(state.config.showcaseTitle||'')}" placeholder="如：我的商业想法库">
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn primary" id="pub-export">⬇ 导出展示数据 JSON</button>
       </div>
-
-      <label class="inl" style="margin-top:18px;display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="pub-enabled" ${state.pub.enabled?'checked':''}> 自动发布到公开仓库（个人网站自动同步）</label>
-      <div class="hint" style="margin:2px 0 10px;color:var(--ink-soft)">勾选后，每次自动同步都会把展示数据写到下面的<b>公开</b>仓库；个人网站读取它即可自动更新。需要你的 Token 对该公开仓库也有写权限。不想自动也可只用上面的手动导出。</div>
-      <div class="row2">
-        <div><label class="inl">公开仓库 用户名/组织</label><input class="full" id="pub-owner" value="${esc(state.pub.owner)}" placeholder="可填托管本应用的公开仓库 owner"></div>
-        <div><label class="inl">公开仓库名</label><input class="full" id="pub-repo" value="${esc(state.pub.repo)}" placeholder="如 my-databases"></div>
-      </div>
-      <div class="row2">
-        <div><label class="inl">文件路径</label><input class="full" id="pub-path" value="${esc(state.pub.path)}" placeholder="showcase/public.json"></div>
-        <div><label class="inl">分支</label><input class="full" id="pub-branch" value="${esc(state.pub.branch)}" placeholder="main"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="pub-now">立即发布到公开仓库</button></div>
-      <div class="hint" style="margin-top:10px;color:var(--ink-soft)">发布后，数据地址通常是：<br><code style="font-size:11px">https://&lt;owner&gt;.github.io/&lt;repo&gt;/&lt;path&gt;</code><br>或 <code style="font-size:11px">https://raw.githubusercontent.com/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;path&gt;</code>。把这个地址填进个人网站的 showcase.html 即可。</div>
+      <div class="hint" style="margin-top:10px;color:var(--ink-soft)">导出后把这个 JSON 文件放到个人网站，由 showcase.html 渲染即可。</div>
     </div>
    </details>
    <div style="display:flex;justify-content:flex-end"><button class="btn rust primary" onclick="closeSettings();markDirty();render()">完成</button></div>`;
@@ -1179,12 +1136,9 @@ function bindSettings(){
     g('g-'+k).oninput=e=>{state.gh[k]=e.target.value.trim();saveLocal();};
   });
   g('g-connect').onclick=async()=>{await ghLoad();};
-  // 对外展示 / 发布
+  // 对外展示 / 导出
   if(g('pub-title')) g('pub-title').oninput=e=>{state.config.showcaseTitle=e.target.value;markDirty();};
   if(g('pub-export')) g('pub-export').onclick=exportShowcase;
-  if(g('pub-enabled')) g('pub-enabled').onchange=e=>{state.pub.enabled=e.target.checked;saveLocal();};
-  ['owner','repo','path','branch'].forEach(k=>{ const el=g('pub-'+k); if(el) el.oninput=ev=>{state.pub[k]=ev.target.value.trim();saveLocal();}; });
-  if(g('pub-now')) g('pub-now').onclick=()=>publishShowcase(true);
   g('g-export').onclick=()=>{
     const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,topics:state.topics,research:state.research},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lab-database.json';a.click();
