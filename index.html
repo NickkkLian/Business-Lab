@@ -364,6 +364,7 @@ function loadLocal(){
     const r = JSON.parse(localStorage.getItem(LS)||'null');
     if(r){
       state.config = Object.assign(structuredClone(DEFAULT_CONFIG), r.config||{});
+      if(/^db-[a-z0-9]{6}$/.test((state.config.showcaseId||''))) state.config.showcaseId='';
       state.projects = r.projects||[]; state.media = r.media||[]; state.research = r.research||[];
       state.freelance = r.freelance||[]; state.career = r.career||[]; state.topics = r.topics||[];
       state.gh = Object.assign(state.gh, r.gh||{});
@@ -491,21 +492,20 @@ function buildShowcase(){
     sections
   };
 }
-// 唯一库标识：用户填了就用；否则按标题生成 slug；再不行生成随机短码并持久化
+// 唯一库标识：完全由用户填写；留空则按展示标题自动生成；都空则返回空（导出时再提示填写）。
+// 历史上自动生成并固化的随机码（db-xxxxxx）一律当作"未设置"，让用户能重新填。
 function slugify(s){return (s||'').toLowerCase().trim().replace(/[^\w\u4e00-\u9fa5]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);}
-function showcaseId(){
-  let id = slugify(state.config.showcaseId);
-  if(!id) id = slugify(state.config.showcaseTitle);
-  if(!id){ id = 'db-'+Math.random().toString(36).slice(2,8); }
-  if(!state.config.showcaseId){ state.config.showcaseId = id; saveLocal(); } // 固化，避免每次变化
-  return id;
-}
+const AUTO_ID_RE = /^db-[a-z0-9]{6}$/;
+function userShowcaseId(){ const v=slugify(state.config.showcaseId); return AUTO_ID_RE.test(v)?'':v; }
+function showcaseId(){ return userShowcaseId() || slugify(state.config.showcaseTitle); }
 function exportShowcase(){
   if(publicCount()===0){toast('还没有勾选「公开展示」的条目','err');return;}
+  const id=showcaseId();
+  if(!id){ openSettings(); toast('请先在「对外展示」里填一个库标识','err'); return; }
   const data=buildShowcase();
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=data.dbId+'.public.json';a.click();
-  toast(`已导出 ${publicCount()} 条（库标识：${data.dbId}）`);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=id+'.public.json';a.click();
+  toast(`已导出 ${publicCount()} 条（库标识：${id}）`);
 }
 
 /* ============================ 工具 ============================ */
@@ -1131,7 +1131,7 @@ function settingsHTML(){
       <label class="inl">这个库的展示标题</label>
       <input class="full" id="pub-title" value="${esc(state.config.showcaseTitle||'')}" placeholder="如：我的商业想法库">
       <label class="inl">库标识（唯一，防止与其它库导出撞名；用作文件名与 dbId）</label>
-      <input class="full" id="pub-id" value="${esc(state.config.showcaseId||'')}" placeholder="如 biz / invest / food（留空会按标题自动生成）">
+      <input class="full" id="pub-id" value="${esc(userShowcaseId())}" placeholder="如 biz / invest / food（留空会按标题自动生成）">
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn primary" id="pub-export">⬇ 导出展示数据 JSON</button>
       </div>
