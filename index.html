@@ -485,18 +485,27 @@ function buildShowcase(){
   }));
   if(rs.length) sections.push({type:'research', label:'研究资料', items:rs});
   return {
+    dbId: showcaseId(),
     title: state.config.showcaseTitle || 'My Database',
     generatedAt: new Date().toISOString(),
     sections
   };
 }
+// 唯一库标识：用户填了就用；否则按标题生成 slug；再不行生成随机短码并持久化
+function slugify(s){return (s||'').toLowerCase().trim().replace(/[^\w\u4e00-\u9fa5]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);}
+function showcaseId(){
+  let id = slugify(state.config.showcaseId);
+  if(!id) id = slugify(state.config.showcaseTitle);
+  if(!id){ id = 'db-'+Math.random().toString(36).slice(2,8); }
+  if(!state.config.showcaseId){ state.config.showcaseId = id; saveLocal(); } // 固化，避免每次变化
+  return id;
+}
 function exportShowcase(){
   if(publicCount()===0){toast('还没有勾选「公开展示」的条目','err');return;}
   const data=buildShowcase();
-  const safe=(data.title||'showcase').replace(/[^\w\u4e00-\u9fa5-]+/g,'_');
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=safe+'-public.json';a.click();
-  toast(`已导出 ${publicCount()} 条展示数据`);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=data.dbId+'.public.json';a.click();
+  toast(`已导出 ${publicCount()} 条（库标识：${data.dbId}）`);
 }
 
 /* ============================ 工具 ============================ */
@@ -1121,6 +1130,8 @@ function settingsHTML(){
         在任意条目详情页右上角点「🌐 公开展示」勾选要对外展示的内容。导出只会包含被勾选的条目，并自动剔除内部评分与私人备注（只含名称、简介、正文、标签、分类）。当前已勾选 <b>${publicCount()}</b> 条。</div>
       <label class="inl">这个库的展示标题</label>
       <input class="full" id="pub-title" value="${esc(state.config.showcaseTitle||'')}" placeholder="如：我的商业想法库">
+      <label class="inl">库标识（唯一，防止与其它库导出撞名；用作文件名与 dbId）</label>
+      <input class="full" id="pub-id" value="${esc(state.config.showcaseId||'')}" placeholder="如 biz / invest / food（留空会按标题自动生成）">
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn primary" id="pub-export">⬇ 导出展示数据 JSON</button>
       </div>
@@ -1138,6 +1149,7 @@ function bindSettings(){
   g('g-connect').onclick=async()=>{await ghLoad();};
   // 对外展示 / 导出
   if(g('pub-title')) g('pub-title').oninput=e=>{state.config.showcaseTitle=e.target.value;markDirty();};
+  if(g('pub-id')) g('pub-id').oninput=e=>{state.config.showcaseId=slugify(e.target.value);markDirty();};
   if(g('pub-export')) g('pub-export').onclick=exportShowcase;
   g('g-export').onclick=()=>{
     const blob=new Blob([JSON.stringify({version:2,config:state.config,projects:state.projects,media:state.media,freelance:state.freelance,career:state.career,topics:state.topics,research:state.research},null,2)],{type:'application/json'});
