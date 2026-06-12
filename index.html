@@ -503,9 +503,31 @@ function exportShowcase(){
   const id=showcaseId();
   if(!id){ openSettings(); toast('请先在「对外展示」里填一个库标识','err'); return; }
   const data=buildShowcase();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=id+'.public.json';a.click();
-  toast(`已导出 ${publicCount()} 条（库标识：${id}）`);
+  publishPublic(id+'.public.json', JSON.stringify(data,null,2), publicCount());
+}
+
+// 发布公开数据：直接写入 GitHub 数据仓库（与主数据同仓库，根目录）；
+// 未配置 GitHub 或发布失败时回退为本地下载
+async function publishPublic(filename,json,count){
+  if(state.gh.token&&state.gh.owner&&state.gh.repo){
+    try{
+      const PUBLIC_REPO='Database-Public'; // 公开数据专用仓库（public）——网站只从这里读取，碰不到私有库
+      const url=`https://api.github.com/repos/${state.gh.owner}/${PUBLIC_REPO}/contents/${filename}`;
+      const head=await fetch(url,{headers:ghHeaders()});
+      const sha=head.ok?(await head.json()).sha:undefined;
+      const body={message:`publish ${filename} (${count} entries)`,content:b64encode(json)};
+      if(sha) body.sha=sha;
+      const res=await fetch(url,{method:'PUT',headers:ghHeaders(),body:JSON.stringify(body)});
+      if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(j.message||('HTTP '+res.status));}
+      toast(`已发布 ${count} 条公开数据 → ${filename}`);
+      return;
+    }catch(e){
+      toast('发布失败: '+e.message+'，已转为本地下载','err');
+    }
+  }
+  const blob=new Blob([json],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  toast(`已导出 ${count} 条 → ${filename}（本地下载）`);
 }
 
 /* ============================ 工具 ============================ */
